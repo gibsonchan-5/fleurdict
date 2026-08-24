@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+body { font-family: -apple-system, sans-serif; background: #f5f5f5; padding: 30px; }
+
+/* Exact CSS from FleurDict */
+.fleurdict-audio-btn {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid rgba(14, 165, 164, 0.18);
+  border-radius: 50%;
+  background: rgba(14, 165, 164, 0.08);
+  color: #0ea5a4;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  margin-left: 5px;
+  vertical-align: middle;
+}
+.fleurdict-audio-btn svg {
+  width: 14px !important;
+  height: 14px !important;
+  stroke-width: 2.25;
+}
+
+h3 { margin-top: 30px; color: #333; }
+.test-row { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
+.test-label { font-size: 13px; color: #666; min-width: 200px; }
+
+/* Force visible */
+.force-color svg { stroke: #ff0000 !important; }
+.force-fill svg { fill: #ff0000 !important; stroke: none !important; }
+.big-btn { width: 40px; height: 40px; }
+.big-btn svg { width: 24px !important; height: 24px !important; }
+</style>
+</head>
+<body>
+
+<h3>Simulating Obsidian setIcon('volume-2')</h3>
+
+<div class="test-row">
+  <span class="test-label">1. setIcon + default color:</span>
+  <div id="t1"></div>
+</div>
+
+<div class="test-row">
+  <span class="test-label">2. setIcon + force stroke red:</span>
+  <div id="t2" class="force-color"></div>
+</div>
+
+<div class="test-row">
+  <span class="test-label">3. Unicode 🔊 with color:</span>
+  <div id="t3"></div>
+</div>
+
+<div class="test-row">
+  <span class="test-label">4. Unicode ● with color:</span>
+  <div id="t4"></div>
+</div>
+
+<div class="test-row">
+  <span class="test-label">5. Bigger button (40px):</span>
+  <div id="t5"></div>
+</div>
+
+<script>
+function createVolumeIcon(el) {
+  el.innerHTML = '';
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  svg.setAttribute('width', '24');
+  svg.setAttribute('height', '24');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '2');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  svg.classList.add('lucide', 'lucide-volume-2');
+
+  const p1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  p1.setAttribute('d', 'M11 5L6 9H2v6h4l5 4V5z');
+  svg.appendChild(p1);
+  const p2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  p2.setAttribute('d', 'M15.54 8.46a5 5 0 0 1 0 7.07');
+  svg.appendChild(p2);
+  const p3 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  p3.setAttribute('d', 'M19.07 4.93a10 10 0 0 1 0 14.14');
+  svg.appendChild(p3);
+  el.appendChild(svg);
+}
+
+// Test 1: Normal setIcon
+const b1 = document.createElement('button');
+b1.className = 'fleurdict-audio-btn';
+createVolumeIcon(b1);
+document.getElementById('t1').appendChild(b1);
+
+// Test 2: Force stroke color
+const b2 = document.createElement('button');
+b2.className = 'fleurdict-audio-btn force-color';
+createVolumeIcon(b2);
+const svg2 = b2.querySelector('svg');
+if (svg2) svg2.style.stroke = '#ff0000';
+document.getElementById('t2').appendChild(b2);
+
+// Test 3: Unicode
+const b3 = document.createElement('button');
+b3.className = 'fleurdict-audio-btn';
+b3.textContent = '🔊';
+b3.style.fontSize = '14px';
+document.getElementById('t3').appendChild(b3);
+
+// Test 4: Unicode dot
+const b4 = document.createElement('button');
+b4.className = 'fleurdict-audio-btn';
+b4.textContent = '●';
+b4.style.fontSize = '14px';
+document.getElementById('t4').appendChild(b4);
+
+// Test 5: Bigger button
+const b5 = document.createElement('button');
+b5.className = 'fleurdict-audio-btn big-btn';
+createVolumeIcon(b5);
+document.getElementById('t5').appendChild(b5);
+</script>
+</body>
+</html>

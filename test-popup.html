@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>FleurDict Popup Test v2.1.0</title>
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f5f5f5; padding: 40px; }
+
+/* Exact CSS from deployed styles.css */
+.fleurdict-popup {
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  max-width: 460px;
+  overflow: hidden;
+}
+
+.fleurdict-popup-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+
+.fleurdict-word {
+  font-size: 19px;
+  font-weight: 700;
+  color: #1a1a1a;
+  cursor: pointer;
+}
+
+.fleurdict-word:hover { color: #0ea5a4 !important; }
+
+.fleurdict-phonetic-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  margin-left: 8px;
+  /* NO border, NO border-radius, NO background */
+}
+
+.fleurdict-phonetic-group:hover {
+  background: rgba(14, 165, 164, 0.08);
+  border-radius: 100px;
+}
+
+.fleurdict-phonetic {
+  font-size: 12px;
+  color: #666;
+  font-family: 'SF Mono', Menlo, monospace;
+  cursor: pointer;
+}
+
+.fleurdict-phonetic:hover {
+  color: #0ea5a4 !important;
+}
+
+.fleurdict-close-btn {
+  margin-left: auto;
+  width: 28px; height: 28px;
+  border: none; background: #f0f0f0;
+  border-radius: 50%; cursor: pointer;
+  font-size: 16px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.fleurdict-popup-body { padding: 16px 18px; }
+
+.fleurdict-pos-section { margin-bottom: 12px; }
+.fleurdict-pos-label {
+  display: inline-block;
+  padding: 2px 8px;
+  background: rgba(14,165,164,0.08);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #0ea5a4;
+  margin-bottom: 8px;
+}
+.fleurdict-def-list { margin: 0; padding-left: 20px; }
+.fleurdict-def-item { margin-bottom: 6px; font-size: 14px; line-height: 1.6; color: #333; }
+.fleurdict-def-text { font-weight: 400; }
+.fleurdict-example { font-size: 12px; color: #888; font-style: italic; margin-top: 2px; }
+.fleurdict-synonyms { font-size: 12px; color: #666; margin-top: 4px; }
+.fleurdict-syn-label { font-weight: 600; }
+.fleurdict-syn-text { color: #0ea5a4; }
+
+.fleurdict-popup-footer {
+  display: flex;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid rgba(0,0,0,0.06);
+}
+.fleurdict-action-btn {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 100px;
+  background: #fff;
+  font-size: 13px;
+  cursor: pointer;
+}
+.fleurdict-action-btn:hover { background: #f5f5f5; }
+
+.version-marker {
+  font-size: 10px;
+  color: #0ea5a4;
+  font-weight: bold;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+</style>
+</head>
+<body>
+
+<h2>Test 1: registration (multiple defs)</h2>
+<div class="fleurdict-popup" id="popup1"></div>
+
+<h2 style="margin-top:40px">Test 2: lucrative</h2>
+<div class="fleurdict-popup" id="popup2"></div>
+
+<script>
+function buildPopup(container, word, phonetics, meanings) {
+  // Header
+  const header = document.createElement('div');
+  header.className = 'fleurdict-popup-header';
+  
+  const wordEl = document.createElement('span');
+  wordEl.className = 'fleurdict-word';
+  wordEl.textContent = word;
+  header.appendChild(wordEl);
+  
+  // Version marker
+  const verEl = document.createElement('span');
+  verEl.className = 'version-marker';
+  verEl.textContent = ' v2.1.0';
+  header.appendChild(verEl);
+  
+  // Phonetic groups
+  for (const p of phonetics) {
+    const group = document.createElement('span');
+    group.className = 'fleurdict-phonetic-group';
+    
+    const phoneticEl = document.createElement('span');
+    phoneticEl.className = 'fleurdict-phonetic';
+    phoneticEl.textContent = p.text;
+    phoneticEl.style.cursor = 'pointer';
+    phoneticEl.title = p.audio ? '点击播放' : '';
+    phoneticEl.addEventListener('click', () => {
+      if (p.audio) {
+        const audio = new Audio(p.audio);
+        audio.play().catch(e => console.warn('Audio failed:', e));
+      }
+    });
+    group.appendChild(phoneticEl);
+    
+    header.appendChild(group);
+  }
+  
+  // Close button
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'fleurdict-close-btn';
+  closeBtn.innerHTML = '&times;';
+  header.appendChild(closeBtn);
+  
+  container.appendChild(header);
+  
+  // Body
+  const body = document.createElement('div');
+  body.className = 'fleurdict-popup-body';
+  
+  for (const m of meanings) {
+    const section = document.createElement('div');
+    section.className = 'fleurdict-pos-section';
+    
+    const label = document.createElement('div');
+    label.className = 'fleurdict-pos-label';
+    label.textContent = m.pos;
+    section.appendChild(label);
+    
+    const list = document.createElement('ol');
+    list.className = 'fleurdict-def-list';
+    
+    for (let i = 0; i < m.defs.length; i++) {
+      const item = document.createElement('li');
+      item.className = 'fleurdict-def-item';
+      item.textContent = m.defs[i];
+      list.appendChild(item);
+    }
+    section.appendChild(list);
+    
+    if (m.synonyms) {
+      const syn = document.createElement('div');
+      syn.className = 'fleurdict-synonyms';
+      syn.innerHTML = '<span class="fleurdict-syn-label">同义词：</span><span class="fleurdict-syn-text">' + m.synonyms.join(', ') + '</span>';
+      section.appendChild(syn);
+    }
+    
+    body.appendChild(section);
+  }
+  
+  container.appendChild(body);
+  
+  // Footer
+  const footer = document.createElement('div');
+  footer.className = 'fleurdict-popup-footer';
+  const aiBtn = document.createElement('button');
+  aiBtn.className = 'fleurdict-action-btn';
+  aiBtn.textContent = '🤖 AI 详解';
+  footer.appendChild(aiBtn);
+  const addBtn = document.createElement('button');
+  addBtn.className = 'fleurdict-action-btn';
+  addBtn.textContent = '+ 加入生词本';
+  footer.appendChild(addBtn);
+  container.appendChild(footer);
+}
+
+// Test data
+buildPopup(document.getElementById('popup1'), 'registration', [
+  { text: '英 [ˌredʒɪˈstreʃ(ə)n]', audio: 'https://dict.youdao.com/dictvoice?audio=registration&type=1' },
+  { text: '美 [ˌredʒɪˈstreʃ(ə)n]', audio: 'https://dict.youdao.com/dictvoice?audio=registration&type=2' },
+], [
+  { pos: 'N. 名词', defs: [
+    '登记，注册，挂号',
+    '登记证，注册证',
+    '<英>（汽车）牌照号码（=registration number）',
+    '<英>（教师对上课学生的）点名',
+    '（管风琴）音栓配合（法）',
+  ], synonyms: ['高中', 'CET4', 'CET6', 'IELTS', '商务英语'] },
+]);
+
+buildPopup(document.getElementById('popup2'), 'lucrative', [
+  { text: '英 [ˈluːkrətv]', audio: 'https://dict.youdao.com/dictvoice?audio=lucrative&type=1' },
+  { text: '美 [luːkrətɪv]', audio: 'https://dict.youdao.com/dictvoice?audio=lucrative&type=2' },
+], [
+  { pos: 'ADJ. 形容词', defs: [
+    '获利多的，赚大钱的',
+    '有利可图的，赚钱的',
+  ], synonyms: ['CET6', 'TOEFL', 'GRE', 'GMAT', 'SAT'] },
+]);
+</script>
+</body>
+</html>

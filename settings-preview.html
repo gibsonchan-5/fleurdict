@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>FleurDict 设置界面设计预览</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #1a1c20;
+    display: flex;
+    gap: 32px;
+    padding: 32px;
+    align-items: flex-start;
+    justify-content: center;
+  }
+  h1 { position: absolute; top: 8px; left: 32px; color: #8a8f98; font-size: 13px; font-weight: 500; }
+
+  /* ===== 主题变量 ===== */
+  .theme-light {
+    --text-normal: #1f2328; --text-muted: #59626e; --text-faint: #8b949e;
+    --background-primary: #ffffff; --background-secondary: #f4f5f7;
+    --fleurdict-primary: #0ea5a4; --fleurdict-primary-hover: #14b8b8;
+    --fleurdict-primary-subtle: rgba(14,165,164,0.08);
+    --fleurdict-primary-border: rgba(14,165,164,0.18);
+    --fleurdict-text: var(--text-normal);
+    --fleurdict-text-secondary: var(--text-muted);
+    --fleurdict-text-tertiary: var(--text-faint);
+    --fleurdict-bg: var(--background-primary);
+    --fleurdict-bg-elevated: var(--background-secondary);
+    --fleurdict-border-subtle: rgba(128,128,128,0.12);
+    --fleurdict-radius-sm: 6px; --fleurdict-radius: 10px;
+    --fleurdict-ease: cubic-bezier(0.4,0,0.2,1);
+    --fleurdict-shadow-sm: 0 1px 2px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .theme-dark {
+    --text-normal: #dcddde; --text-muted: #999ea6; --text-faint: #6e7378;
+    --background-primary: #1e1e1e; --background-secondary: #262626;
+    --fleurdict-primary: #14b8b8; --fleurdict-primary-hover: #2dd4d4;
+    --fleurdict-primary-subtle: rgba(20,184,184,0.10);
+    --fleurdict-primary-border: rgba(20,184,184,0.25);
+    --fleurdict-text: var(--text-normal);
+    --fleurdict-text-secondary: var(--text-muted);
+    --fleurdict-text-tertiary: var(--text-faint);
+    --fleurdict-bg: var(--background-primary);
+    --fleurdict-bg-elevated: var(--background-secondary);
+    --fleurdict-border-subtle: rgba(128,128,128,0.16);
+    --fleurdict-radius-sm: 6px; --fleurdict-radius: 10px;
+    --fleurdict-ease: cubic-bezier(0.4,0,0.2,1);
+    --fleurdict-shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+  }
+
+  .panel {
+    width: 720px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(128,128,128,0.2);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+    background: var(--fleurdict-bg);
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+  .panel-label { color: #8a8f98; font-size: 11px; margin-bottom: 8px; text-align: center; letter-spacing: 0.05em; }
+
+  /* ===== 插件实际 CSS（设置部分） ===== */
+  .fleurdict-settings {
+    max-width: 720px;
+    padding: 4px 16px 32px;
+  }
+  .fleurdict-settings-section { margin-bottom: 28px; }
+  .fleurdict-settings-title {
+    display: flex; align-items: center; gap: 12px;
+    font-size: 13px; font-weight: 600;
+    color: var(--fleurdict-text-secondary);
+    margin: 8px 0 14px;
+    letter-spacing: 0.04em;
+  }
+  .fleurdict-settings-title::before {
+    content: ''; width: 4px; height: 14px; border-radius: 2px;
+    background: var(--fleurdict-primary); flex-shrink: 0;
+  }
+  .fleurdict-settings-desc {
+    font-size: 12.5px; color: var(--fleurdict-text-tertiary);
+    margin: -6px 0 14px; line-height: 1.65;
+    max-width: 56ch; padding-left: 16px;
+  }
+
+  .fleurdict-settings .setting-item {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 20px; padding: 12px 16px; margin-bottom: 6px;
+    background: var(--fleurdict-bg-elevated);
+    border: 1px solid var(--fleurdict-border-subtle);
+    border-radius: var(--fleurdict-radius);
+    transition: border-color .18s var(--fleurdict-ease);
+  }
+  .fleurdict-settings .setting-item:hover {
+    border-color: var(--fleurdict-primary-border);
+  }
+  .fleurdict-settings .setting-item:last-child,
+  .fleurdict-settings .setting-item:last-of-type {
+    margin-bottom: 0;
+  }
+  .fleurdict-settings .setting-item-info { flex: 1; min-width: 0; padding-right: 12px; }
+  .fleurdict-settings .setting-item-name {
+    font-size: 13.5px; font-weight: 600; color: var(--fleurdict-text);
+    margin-bottom: 3px; letter-spacing: 0;
+  }
+  .fleurdict-settings .setting-item-description {
+    font-size: 12px; color: var(--fleurdict-text-tertiary); line-height: 1.6;
+    max-width: 48ch; font-feature-settings: 'tnum';
+  }
+  .fleurdict-settings .setting-item-control {
+    flex-shrink: 0; display: flex; align-items: center;
+    justify-content: flex-end; gap: 8px; flex-wrap: wrap;
+  }
+
+  /* Inputs & dropdowns — natural width, always left-aligned text */
+  .fleurdict-settings .setting-item-control input[type='text'],
+  .fleurdict-settings .setting-item-control input[type='number'],
+  .fleurdict-settings .setting-item-control input[type='password'],
+  .fleurdict-settings .setting-item-control select,
+  .fleurdict-settings .setting-item-control .dropdown {
+    min-height: 30px; padding: 0 12px;
+    border: 1px solid var(--fleurdict-border-subtle);
+    border-radius: var(--fleurdict-radius-sm);
+    background: var(--fleurdict-bg); color: var(--fleurdict-text);
+    font-size: 12.5px; text-align: left; outline: none;
+    transition: all .15s var(--fleurdict-ease);
+  }
+  .fleurdict-settings .setting-item-control input[type='text'],
+  .fleurdict-settings .setting-item-control input[type='number'],
+  .fleurdict-settings .setting-item-control input[type='password'] { min-width: 140px; width: auto; }
+  .fleurdict-settings .setting-item-control select,
+  .fleurdict-settings .setting-item-control .dropdown { min-width: 120px; width: auto; text-align-last: left; }
+  .fleurdict-settings .setting-item-control input:focus,
+  .fleurdict-settings .setting-item-control select:focus {
+    border-color: var(--fleurdict-primary-border);
+    box-shadow: 0 0 0 3px var(--fleurdict-primary-subtle);
+  }
+
+  /* Toggle */
+  .fleurdict-settings .checkbox-container {
+    position: relative; display: inline-block;
+    width: 38px; height: 22px;
+    border-radius: 11px; background: var(--fleurdict-border-subtle);
+    border: none; cursor: pointer; transition: background .15s var(--fleurdict-ease);
+  }
+  .fleurdict-settings .checkbox-container.is-enabled { background: var(--fleurdict-primary); }
+  .fleurdict-settings .checkbox-container::after {
+    content: ''; position: absolute; width: 16px; height: 16px;
+    border-radius: 50%; background: #ffffff; top: 3px; left: 3px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+    transition: transform .15s var(--fleurdict-ease);
+  }
+  .fleurdict-settings .checkbox-container.is-enabled::after { transform: translateX(16px); }
+
+  /* Slider */
+  .fleurdict-settings input[type='range'] {
+    -webkit-appearance: none; width: 140px; height: 4px;
+    border-radius: 2px; background: var(--fleurdict-border-subtle); outline: none;
+  }
+  .fleurdict-settings input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px;
+    border-radius: 50%; background: var(--fleurdict-primary);
+    cursor: pointer; border: 2px solid var(--fleurdict-bg);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    transition: transform .15s var(--fleurdict-ease);
+  }
+  .fleurdict-settings input[type='range']::-webkit-slider-thumb:hover { transform: scale(1.1); }
+
+  /* Buttons — same 30px height as inputs; hierarchy: ghost < primary < warning */
+  .fleurdict-settings .setting-item-control button {
+    display: inline-flex; align-items: center; justify-content: center;
+    height: 30px; min-width: 64px; padding: 0 16px;
+    border-radius: var(--fleurdict-radius-sm);
+    font-size: 12.5px; font-weight: 500; letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: all .15s var(--fleurdict-ease);
+    border: 1px solid var(--fleurdict-border-subtle);
+    background: transparent;
+    color: var(--fleurdict-text-secondary);
+    white-space: nowrap;
+  }
+  .fleurdict-settings .setting-item-control button:hover {
+    border-color: var(--fleurdict-primary); color: var(--fleurdict-primary);
+    background: var(--fleurdict-primary-subtle);
+  }
+  .fleurdict-settings .setting-item-control button:active {
+    transform: scale(0.97);
+  }
+  .fleurdict-settings .setting-item-control button:focus-visible {
+    outline: none; border-color: var(--fleurdict-primary);
+    box-shadow: 0 0 0 3px var(--fleurdict-primary-subtle);
+  }
+  .fleurdict-settings .setting-item-control button.mod-cta {
+    background: var(--fleurdict-primary); border-color: var(--fleurdict-primary); color: #ffffff;
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(14,165,164,0.18);
+  }
+  .fleurdict-settings .setting-item-control button.mod-cta:hover {
+    background: var(--fleurdict-primary-hover); border-color: var(--fleurdict-primary-hover);
+    box-shadow: 0 2px 6px rgba(14,165,164,0.25);
+  }
+  .fleurdict-settings .setting-item-control button.mod-warning {
+    background: transparent; border-color: #e5484d; color: #e5484d;
+    font-weight: 500;
+  }
+  .fleurdict-settings .setting-item-control button.mod-warning:hover {
+    background: #e5484d; border-color: #e5484d; color: #ffffff;
+  }
+</style>
+</head>
+<body>
+<h1>FleurDict 设置界面设计预览 — 浅色 / 深色双主题</h1>
+
+<div>
+  <div class="panel-label">浅色主题</div>
+  <div class="panel theme-light" id="light"></div>
+</div>
+
+<div>
+  <div class="panel-label">深色主题</div>
+  <div class="panel theme-dark" id="dark"></div>
+</div>
+
+<script>
+const items = [
+  { name: '词典源', desc: '选择查词使用的词典源（推荐：有道词典，含中文释义）', type: 'select', value: '有道词典（中文释义）' },
+  { name: '发音偏好', desc: '选择英式发音或美式发音作为默认播放口音', type: 'select', value: '美式发音 (US)' },
+  { name: '启用缓存', desc: '缓存在线词典查询结果，减少重复请求', type: 'toggle', on: true },
+  { name: '缓存有效期', desc: '缓存数据的保留天数', type: 'slider', value: 7 },
+  { name: '清除缓存', desc: '清除所有已缓存的词典数据', type: 'warning', text: '清除' },
+];
+
+const aiItems = [
+  { name: 'AI Provider', desc: '选择 AI 服务提供商', type: 'select', value: 'DeepSeek' },
+  { name: 'API Key', desc: 'AI API 密钥', type: 'text', value: 'sk-...' },
+  { name: '流式输出', desc: '启用 SSE 流式输出，实时显示 AI 回复', type: 'toggle', on: true },
+];
+
+const syncItems = [
+  { name: '同步操作', desc: '手动触发同步', type: 'buttons', buttons: [ { text: '本地 → 欧路', cta: true }, { text: '欧路 → 本地' } ] },
+];
+
+function buildSection(container, title, desc, sectionItems) {
+  const sec = document.createElement('div');
+  sec.className = 'fleurdict-settings-section';
+
+  const h = document.createElement('h3');
+  h.className = 'fleurdict-settings-title';
+  h.textContent = title;
+  sec.appendChild(h);
+
+  if (desc) {
+    const p = document.createElement('p');
+    p.className = 'fleurdict-settings-desc';
+    p.textContent = desc;
+    sec.appendChild(p);
+  }
+
+  for (const it of sectionItems) {
+    const item = document.createElement('div');
+    item.className = 'setting-item';
+
+    const info = document.createElement('div');
+    info.className = 'setting-item-info';
+    info.innerHTML = `<div class="setting-item-name">${it.name}</div><div class="setting-item-description">${it.desc}</div>`;
+    item.appendChild(info);
+
+    const ctrl = document.createElement('div');
+    ctrl.className = 'setting-item-control';
+
+    if (it.type === 'select') {
+      ctrl.innerHTML = `<select><option>${it.value}</option></select>`;
+    } else if (it.type === 'toggle') {
+      ctrl.innerHTML = `<div class="checkbox-container ${it.on ? 'is-enabled' : ''}"></div>`;
+    } else if (it.type === 'slider') {
+      ctrl.innerHTML = `<span style="font-size:12px;color:var(--fleurdict-text-secondary);margin-right:8px;font-weight:600;">${it.value}</span><input type="range" value="${it.value}" max="30">`;
+    } else if (it.type === 'text') {
+      ctrl.innerHTML = `<input type="text" value="${it.value}" placeholder="${it.value}">`;
+    } else if (it.type === 'buttons') {
+      ctrl.innerHTML = it.buttons.map(b => `<button class="${b.cta ? 'mod-cta' : ''}">${b.text}</button>`).join('');
+    } else if (it.type === 'warning') {
+      ctrl.innerHTML = `<button class="mod-warning">${it.text}</button>`;
+    }
+
+    item.appendChild(ctrl);
+    sec.appendChild(item);
+  }
+
+  container.appendChild(sec);
+}
+
+function build(id) {
+  const root = document.getElementById(id);
+  const wrap = document.createElement('div');
+  wrap.className = 'fleurdict-settings';
+  root.appendChild(wrap);
+
+  buildSection(wrap, '词典源设置', '查词引擎优先使用有道词典（免费、无需配置，中文释义），无结果时自动切换英文词典。', items);
+  buildSection(wrap, 'AI 设置', null, aiItems);
+  buildSection(wrap, '欧路词典同步', null, syncItems);
+}
+
+build('light');
+build('dark');
+</script>
+</body>
+</html>

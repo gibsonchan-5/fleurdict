@@ -1,0 +1,2184 @@
+/*
+ * FleurDict — Premium Edition
+ * A restrained, editorial design language.
+ * Palette: slate + cyan accent, glass morphism, precise typography.
+ */
+
+/* ============================================================================
+   Design Tokens
+   ============================================================================ */
+
+:root {
+  /* Core palette */
+  --fleurdict-primary: #0ea5a4;          /* teal accent */
+  --fleurdict-primary-hover: #14b8b8;
+  --fleurdict-primary-subtle: rgba(14, 165, 164, 0.08);
+  --fleurdict-primary-border: rgba(14, 165, 164, 0.18);
+
+  /* Secondary accent */
+  --fleurdict-accent: #6366f1;           /* indigo */
+  --fleurdict-accent-subtle: rgba(99, 102, 241, 0.08);
+
+  /* Neutral scale */
+  --fleurdict-text: var(--text-normal);
+  --fleurdict-text-secondary: var(--text-muted);
+  --fleurdict-text-tertiary: var(--text-faint);
+  --fleurdict-bg: var(--background-primary);
+  --fleurdict-bg-elevated: var(--background-secondary);
+  --fleurdict-border: var(--background-modifier-border);
+  --fleurdict-border-subtle: rgba(128, 128, 128, 0.12);
+
+  /* Geometry */
+  --fleurdict-radius-sm: 6px;
+  --fleurdict-radius: 10px;
+  --fleurdict-radius-lg: 14px;
+
+  /* Shadows */
+  --fleurdict-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06);
+  --fleurdict-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+  --fleurdict-shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06);
+
+  /* Motion */
+  --fleurdict-ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================================================
+   Overlay
+   ============================================================================ */
+
+.fleurdict-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: transparent;
+}
+
+/* ============================================================================
+   Dictionary Popup
+   ============================================================================ */
+
+.fleurdict-popup {
+  position: fixed;
+  z-index: 10000;
+  background: var(--fleurdict-bg, #ffffff);
+  border: 1px solid var(--fleurdict-border-subtle);
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.10), 0 4px 12px rgba(0, 0, 0, 0.06);
+  min-width: 290px;
+  max-width: 400px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: fleurdict-fadein 0.25s var(--fleurdict-ease);
+  backdrop-filter: blur(16px) saturate(160%);
+  transition: none !important;
+}
+
+@keyframes fleurdict-fadein {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.fleurdict-popup-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0; /* Allow flex children to shrink */
+  background: var(--fleurdict-bg, #ffffff) !important;
+}
+
+/* Header — elevated glass effect */
+.fleurdict-popup-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px 8px;
+  border-bottom: none;
+  flex-shrink: 0;
+  background: transparent;
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.fleurdict-popup-header.has-phonetics {
+  border-bottom: 1px solid var(--fleurdict-border-subtle);
+}
+
+.fleurdict-header-top {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.fleurdict-word {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--fleurdict-text);
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  flex: 1;
+  font-family: 'SF Pro Display', 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.fleurdict-close-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  color: var(--fleurdict-text-tertiary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.fleurdict-close-btn:hover {
+  background: var(--fleurdict-border-subtle);
+  color: var(--fleurdict-text-secondary);
+}
+
+/* Phonetics column — each phonetic on its own line, aligned with word */
+.fleurdict-phonetics-col {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 4px;
+}
+
+.fleurdict-phonetic-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1;
+}
+
+.fleurdict-phonetic-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  background: var(--fleurdict-primary-subtle);
+  color: var(--fleurdict-primary);
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+.fleurdict-phonetic-ipa {
+  font-size: 14px;
+  color: var(--fleurdict-text-secondary);
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.fleurdict-play-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--fleurdict-text-tertiary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  line-height: 0;
+}
+
+.fleurdict-play-icon:hover {
+  color: var(--fleurdict-primary) !important;
+  background: var(--fleurdict-primary-subtle);
+}
+
+.fleurdict-play-icon svg {
+  width: 13px;
+  height: 13px;
+}
+
+.fleurdict-word {
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.fleurdict-word:hover {
+  color: #0ea5a4 !important;
+}
+
+/* (fd-play-btn and fleurdict-audio-btn styles removed — audio now triggered by clicking phonetic text) */
+
+/* Close button — refined */
+
+/* Body — clean definitions */
+.fleurdict-popup-body {
+  padding: 14px 18px;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.fleurdict-pos-section {
+  margin-bottom: 16px;
+}
+
+.fleurdict-pos-section:last-child {
+  margin-bottom: 0;
+}
+
+.fleurdict-pos-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--fleurdict-primary);
+  background: var(--fleurdict-primary-subtle);
+  padding: 3px 10px;
+  border-radius: 6px;
+  display: inline-block;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.fleurdict-def-list {
+  margin: 0;
+  padding-left: 18px;
+  list-style: decimal;
+}
+
+.fleurdict-def-item {
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--fleurdict-text);
+  margin-bottom: 2px;
+  padding-left: 2px;
+}
+
+.fleurdict-def-text {
+  color: var(--fleurdict-text);
+}
+
+.fleurdict-example {
+  font-size: 12.5px;
+  color: var(--fleurdict-text-secondary);
+  font-style: italic;
+  margin-top: 2px;
+  padding-left: 12px;
+  border-left: 2px solid var(--fleurdict-primary-border);
+  line-height: 1.6;
+}
+
+.fleurdict-synonyms {
+  margin-top: 8px;
+  font-size: 12.5px;
+  padding: 6px 10px;
+  background: var(--fleurdict-bg-elevated);
+  border-radius: 8px;
+  border: 1px solid var(--fleurdict-border-subtle);
+}
+
+.fleurdict-syn-label {
+  color: var(--fleurdict-text-tertiary);
+  font-weight: 500;
+  margin-right: 4px;
+}
+
+.fleurdict-syn-text {
+  color: var(--fleurdict-accent);
+}
+
+.fleurdict-no-result {
+  color: var(--fleurdict-text-secondary);
+  text-align: center;
+  padding: 24px 16px;
+  font-size: 13px;
+}
+
+.fleurdict-error-message {
+  color: #e11d48;
+  text-align: center;
+  padding: 16px;
+}
+
+.fleurdict-error {
+  font-size: 12px;
+  color: #e11d48;
+  margin-left: 8px;
+}
+
+/* Vertical resize handle — bottom edge drag area, invisible */
+.fleurdict-resize-handle {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 8px;
+  cursor: ns-resize;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+/* Footer — refined actions */
+.fleurdict-popup-footer {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--fleurdict-border-subtle);
+  flex-shrink: 0;
+  background: var(--fleurdict-bg, #ffffff);
+  justify-content: center;
+}
+
+.fleurdict-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border: 1px solid var(--fleurdict-border-subtle);
+  border-radius: 8px;
+  background: var(--fleurdict-bg-elevated);
+  color: var(--fleurdict-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.fleurdict-action-btn svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.fleurdict-action-btn:hover {
+  background: var(--fleurdict-primary-subtle);
+  border-color: var(--fleurdict-primary-border);
+  color: var(--fleurdict-primary);
+  transform: translateY(-1px);
+}
+
+.fleurdict-ai-btn:hover {
+  border-color: var(--fleurdict-accent);
+  color: var(--fleurdict-accent);
+  background: var(--fleurdict-accent-subtle);
+}
+
+.fleurdict-add-btn:hover {
+  border-color: var(--fleurdict-primary);
+  color: var(--fleurdict-primary);
+  background: var(--fleurdict-primary-subtle);
+}
+
+.fleurdict-add-btn.fleurdict-added {
+  border-color: var(--fleurdict-primary);
+  background: var(--fleurdict-primary-subtle);
+  color: var(--fleurdict-primary);
+}
+
+/* ============================================================================
+   Settings Tab
+   ============================================================================ */
+
+.fleurdict-settings {
+  max-width: 720px;
+  padding: 4px 16px 32px;
+}
+
+.fleurdict-settings-section {
+  margin-bottom: 28px;
+}
+
+/*
+ * Section title — editorial chapter label.
+ * Small size, wide tracking, muted color: hierarchy through restraint.
+ * Teal bar (4px) + gap (12px) = 16px, exactly matching card content padding.
+ */
+.fleurdict-settings-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fleurdict-text-secondary);
+  margin: 8px 0 14px;
+  letter-spacing: 0.04em;
+}
+
+.fleurdict-settings-title::before {
+  content: '';
+  width: 4px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--fleurdict-primary);
+  flex-shrink: 0;
+}
+
+/* Intro paragraph aligns with the title text & card content (16px rail) */
+.fleurdict-settings-desc {
+  font-size: 12.5px;
+  color: var(--fleurdict-text-tertiary);
+  line-height: 1.65;
+  max-width: 56ch;
+  margin: -6px 0 14px;
+  padding-left: 16px;
+}
+
+/* Obsidian Setting items — card style */
+.fleurdict-settings .setting-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 12px 16px;
+  margin-bottom: 6px;
+  background: var(--fleurdict-bg-elevated);
+  border: 1px solid var(--fleurdict-border-subtle);
+  border-radius: var(--fleurdict-radius);
+  transition: border-color 0.18s var(--fleurdict-ease),
+              box-shadow 0.18s var(--fleurdict-ease);
+}
+
+.fleurdict-settings .setting-item:hover {
+  border-color: var(--fleurdict-primary-border);
+}
+
+.fleurdict-settings .setting-item:last-child,
+.fleurdict-settings .setting-item:last-of-type {
+  margin-bottom: 0;
+}
+
+.fleurdict-settings .setting-item-info {
+  flex: 1;
+  min-width: 0;
+  padding-right: 12px;
+}
+
+.fleurdict-settings .setting-item-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--fleurdict-text);
+  margin-bottom: 3px;
+  letter-spacing: 0;
+}
+
+.fleurdict-settings .setting-item-description {
+  font-size: 12px;
+  color: var(--fleurdict-text-tertiary);
+  line-height: 1.6;
+  max-width: 48ch;
+  font-feature-settings: 'tnum';
+}
+
+.fleurdict-settings .setting-item-control {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Inputs & dropdowns — natural width, always left-aligned text */
+.fleurdict-settings .setting-item-control input[type='text'],
+.fleurdict-settings .setting-item-control input[type='number'],
+.fleurdict-settings .setting-item-control input[type='password'],
+.fleurdict-settings .setting-item-control select,
+.fleurdict-settings .setting-item-control .dropdown {
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--fleurdict-border-subtle);
+  border-radius: var(--fleurdict-radius-sm);
+  background: var(--fleurdict-bg);
+  color: var(--fleurdict-text);
+  font-size: 12.5px;
+  text-align: left;
+  outline: none;
+  transition: all 0.15s var(--fleurdict-ease);
+}
+
+.fleurdict-settings .setting-item-control input[type='text'],
+.fleurdict-settings .setting-item-control input[type='number'],
+.fleurdict-settings .setting-item-control input[type='password'] {
+  min-width: 140px;
+  width: auto;
+}
+
+.fleurdict-settings .setting-item-control select,
+.fleurdict-settings .setting-item-control .dropdown {
+  min-width: 120px;
+  width: auto;
+  text-align-last: left;
+}
+
+.fleurdict-settings .setting-item-control input:focus,
+.fleurdict-settings .setting-item-control select:focus,
+.fleurdict-settings .setting-item-control .dropdown:focus {
+  border-color: var(--fleurdict-primary-border);
+  box-shadow: 0 0 0 3px var(--fleurdict-primary-subtle);
+}
+
+/* Toggle switches — override Obsidian's native toggle */
+.fleurdict-settings .checkbox-container {
+  position: relative;
+  display: inline-block;
+  width: 38px;
+  height: 22px;
+  border-radius: 11px;
+  background: var(--fleurdict-border-subtle);
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s var(--fleurdict-ease);
+  box-sizing: border-box;
+}
+
+.fleurdict-settings .checkbox-container.is-enabled {
+  background: var(--fleurdict-primary);
+}
+
+/* Override Obsidian's native knob (::after or child element) for size + centering */
+.fleurdict-settings .checkbox-container::after,
+.fleurdict-settings .checkbox-container > * {
+  width: 16px !important;
+  height: 16px !important;
+  top: 3px !important;
+  left: 3px !important;
+  right: auto !important;
+  bottom: auto !important;
+  box-sizing: border-box;
+}
+
+/* Sliders */
+.fleurdict-settings input[type='range'] {
+  -webkit-appearance: none;
+  width: 140px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--fleurdict-border-subtle);
+  outline: none;
+}
+
+.fleurdict-settings input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--fleurdict-primary);
+  cursor: pointer;
+  border: 2px solid var(--fleurdict-bg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition: transform 0.15s var(--fleurdict-ease);
+}
+
+.fleurdict-settings input[type='range']::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+}
+
+/* Buttons in settings */
+/* Buttons — same 30px height as inputs; hierarchy: ghost < primary (teal) < warning (red) */
+.fleurdict-settings .setting-item-control button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  min-width: 64px;
+  padding: 0 16px;
+  border-radius: var(--fleurdict-radius-sm);
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: all 0.15s var(--fleurdict-ease);
+  border: 1px solid var(--fleurdict-border-subtle);
+  background: transparent;
+  color: var(--fleurdict-text-secondary);
+  white-space: nowrap;
+}
+
+.fleurdict-settings .setting-item-control button:hover:not(:disabled) {
+  border-color: var(--fleurdict-primary);
+  color: var(--fleurdict-primary);
+  background: var(--fleurdict-primary-subtle);
+}
+
+.fleurdict-settings .setting-item-control button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.fleurdict-settings .setting-item-control button:focus-visible {
+  outline: none;
+  border-color: var(--fleurdict-primary);
+  box-shadow: 0 0 0 3px var(--fleurdict-primary-subtle);
+}
+
+.fleurdict-settings .setting-item-control button.mod-cta {
+  background: var(--fleurdict-primary);
+  border-color: var(--fleurdict-primary);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(14, 165, 164, 0.18);
+}
+
+.fleurdict-settings .setting-item-control button.mod-cta:hover:not(:disabled) {
+  background: var(--fleurdict-primary-hover);
+  border-color: var(--fleurdict-primary-hover);
+  box-shadow: 0 2px 6px rgba(14, 165, 164, 0.25);
+}
+
+.fleurdict-settings .setting-item-control button.mod-cta:active:not(:disabled) {
+  transform: scale(0.97);
+  box-shadow: 0 1px 2px rgba(14, 165, 164, 0.18);
+}
+
+.fleurdict-settings .setting-item-control button.mod-warning {
+  background: transparent;
+  border-color: #e5484d;
+  color: #e5484d;
+  font-weight: 500;
+}
+
+.fleurdict-settings .setting-item-control button.mod-warning:hover:not(:disabled) {
+  background: #e5484d;
+  border-color: #e5484d;
+  color: #ffffff;
+}
+
+.fleurdict-settings .setting-item-control button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Collapse extra borders from stacked items */
+.fleurdict-settings .setting-item + .setting-item {
+  margin-top: 0;
+}
+
+.fleurdict-source-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fleurdict-source-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--fleurdict-bg-elevated);
+  border-radius: var(--fleurdict-radius);
+  border: 1px solid var(--fleurdict-border-subtle);
+}
+
+.fleurdict-source-name {
+  flex: 1;
+  font-size: 13px;
+}
+
+.fleurdict-source-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.fleurdict-source-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: var(--fleurdict-radius-sm);
+  background: transparent;
+  color: var(--fleurdict-text-tertiary);
+  cursor: pointer;
+  transition: all 0.15s var(--fleurdict-ease);
+}
+
+.fleurdict-source-btn:hover {
+  background: var(--fleurdict-bg-elevated);
+  color: var(--fleurdict-text);
+}
+
+.fleurdict-add-source-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border: 1px dashed var(--fleurdict-border);
+  border-radius: var(--fleurdict-radius);
+  background: transparent;
+  color: var(--fleurdict-text-tertiary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s var(--fleurdict-ease);
+  width: 100%;
+  justify-content: center;
+}
+
+.fleurdict-add-source-btn:hover {
+  border-color: var(--fleurdict-primary);
+  color: var(--fleurdict-primary);
+  background: var(--fleurdict-primary-subtle);
+}
+
+/* ============================================================================
+   Flashcard Modal
+   ============================================================================ */
+
+.fleurdict-flashcard-modal .modal-content {
+  max-width: 520px;
+}
+
+.fleurdict-flashcard-modal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px;
+}
+
+.fleurdict-flashcard-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.fleurdict-flashcard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+.fleurdict-flashcard-mode {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fleurdict-primary);
+  background: var(--fleurdict-primary-subtle);
+  padding: 4px 10px;
+  border-radius: 100px;
+}
+
+.fleurdict-flashcard-face {
+  width: 100%;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 28px;
+  background: linear-gradient(
+    135deg,
+    var(--fleurdict-bg-elevated) 0%,
+    var(--fleurdict-bg) 100%
+  );
+  border: 1px solid var(--fleurdict-border-subtle);
+  border-radius: var(--fleurdict-radius-lg);
+  box-shadow: var(--fleurdict-shadow-sm);
+  transition: transform 0.3s var(--fleurdict-ease);
+}
+
+.fleurdict-flashcard-face:hover {
+  transform: translateY(-1px);
+}
+
+.fleurdict-flashcard-word {
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--fleurdict-text);
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+
+.fleurdict-flashcard-phonetic {
+  font-size: 13px;
+  color: var(--fleurdict-text-secondary);
+  font-family: var(--font-monospace);
+  margin-bottom: 10px;
+}
+
+.fleurdict-flashcard-context {
+  font-size: 12px;
+  color: var(--fleurdict-text-tertiary);
+  font-style: italic;
+  text-align: center;
+  margin-bottom: 16px;
+  max-width: 80%;
+}
+
+.fleurdict-flashcard-meaning {
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--fleurdict-text);
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.fleurdict-flashcard-note {
+  font-size: 12px;
+  color: var(--fleurdict-text-secondary);
+  text-align: center;
+}
+
+.fleurdict-flashcard-flip-btn {
+  margin-top: 14px;
+  padding: 7px 18px;
+  border: 1px solid var(--fleurdict-border);
+  border-radius: 100px;
+  background: var(--fleurdict-bg);
+  color: var(--fleurdict-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s var(--fleurdict-ease);
+}
+
+.fleurdict-flashcard-flip-btn:hover {
+  background: var(--fleurdict-primary-subtle);
+  border-color: var(--fleurdict-primary-border);
+  color: var(--fleurdict-primary);
+}
+
+.fleurdict-flashcard-rating {
+  width: 100%;
+  margin-top: 20px;
+  text-align: center;
+}
+
+.fleurdict-flashcard-rating-prompt {
+  font-size: 12px;
+  color: var(--fleurdict-text-tertiary);
+  margin-bottom: 12px;
+}
+
+.fleurdict-flashcard-rating-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.fleurdict-flashcard-rating-btn {
+  padding: 8px 18px;
+  border: 1px solid var(--fleurdict-border-subtle);
+  border-radius: 100px;
+  background: var(--fleurdict-bg);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s var(--fleurdict-ease);
+  color: var(--fleurdict-text-secondary);
+}
+
+.fleurdict-rating-again:hover {
+  border-color: #e11d48;
+  color: #e11d48;
+  background: rgba(225, 29, 72, 0.06);
+}
+
+.fleurdict-rating-hard:hover {
+  border-color: #d97706;
+  color: #d97706;
+  background: rgba(217, 119, 6, 0.06);
+}
+
+.fleurdict-rating-good:hover {
+  border-color: var(--fleurdict-primary);
+  color: var(--fleurdict-primary);
+  background: var(--fleurdict-primary-subtle);
+}
+
+.fleurdict-rating-easy:hover {
+  border-color: var(--fleurdict-accent);
+  color: var(--fleurdict-accent);
+  background: var(--fleurdict-accent-subtle);
+}
+
+.fleurdict-flashcard-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 18px;
+  width: 100%;
+}
+
+.fleurdict-flashcard-skip-btn {
+  padding: 6px 14px;
+  border: 1px solid var(--fleurdict-border-subtle);
+  border-radius: 100px;
+  background: var(--fleurdict-bg);
+  color: var(--fleurdict-text-tertiary);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s var(--fleurdict-ease);
+}
+
+.fleurdict-flashcard-skip-btn:hover {
+  background: var(--fleurdict-bg-elevated);
+  color: var(--fleurdict-text-secondary);
+}
+
+.fleurdict-flashcard-stats {
+  font-size: 11px;
+  color: var(--fleurdict-text-tertiary);
+  font-feature-settings: "tnum";
+}
+
+/* Progress bar */
+.fleurdict-progress-bar {
+  width: 140px;
+  height: 3px;
+  background: var(--fleurdict-border-subtle);
+  border-radius: 100px;
+  overflow: hidden;
+}
+
+.fleurdict-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--fleurdict-primary), var(--fleurdict-accent));
+  border-radius: 100px;
+  transition: width 0.4s var(--fleurdict-ease);
+}
+
+.fleurdict-flashcard-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  font-size: 11px;
+  color: var(--fleurdict-text-tertiary);
+}
+
+/* Flashcard complete */
+.fleurdict-flashcard-complete {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 24px;
+  gap: 14px;
+  text-align: center;
+}
+
+.fleurdict-flashcard-complete-emoji {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--fleurdict-primary-subtle);
+  border: 1.5px solid var(--fleurdict-primary-border);
+  color: var(--fleurdict-primary);
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.fleurdict-flashcard-complete-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--fleurdict-text);
+  letter-spacing: -0.01em;
+}
+
+.fleurdict-flashcard-complete-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fleurdict-flashcard-stat {
+  font-size: 12px;
+  color: var(--fleurdict-text-secondary);
+}
+
+.fleurdict-flashcard-complete-btn {
+  padding: 10px 32px;
+  border: none;
+  border-radius: 100px;
+  background: var(--fleurdict-primary);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s var(--fleurdict-ease);
+  margin-top: 14px;
+}
+
+.fleurdict-flashcard-complete-btn:hover {
+  background: var(--fleurdict-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(14, 165, 164, 0.25);
+}
+
+/* ============================================================================
+   AI Modal
+   ============================================================================ */
+
+.fleurdict-ai-modal {
+  display: flex;
+  flex-direction: column;
+  height: 70vh;
+  max-height: 600px;
+}
+
+.fleurdict-ai-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--fleurdict-border-subtle);
+  flex-shrink: 0;
+  background: linear-gradient(
+    to bottom,
+    var(--fleurdict-accent-subtle),
+    transparent
+  );
+}
+
+.fleurdict-ai-modal-header-icon {
+  font-size: 16px;
+  color: var(--fleurdict-accent);
+}
+
+.fleurdict-ai-modal-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fleurdict-text);
+  letter-spacing: -0.01em;
+}
+
+.fleurdict-ai-modal-close {
+  margin-left: auto;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: var(--fleurdict-radius-sm);
+  background: transparent;
+  color: var(--fleurdict-text-tertiary);
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.15s var(--fleurdict-ease);
+}
+
+.fleurdict-ai-modal-close:hover {
+  background: var(--fleurdict-bg-elevated);
+  color: var(--fleurdict-text);
+}
+
+.fleurdict-ai-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--fleurdict-text);
+}
+
+.fleurdict-ai-modal-body h1,
+.fleurdict-ai-modal-body h2,
+.fleurdict-ai-modal-body h3 {
+  margin-top: 18px;
+  margin-bottom: 8px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.fleurdict-ai-modal-body code {
+  background: var(--fleurdict-bg-elevated);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.fleurdict-ai-modal-body pre {
+  background: var(--fleurdict-bg-elevated);
+  padding: 14px;
+  border-radius: var(--fleurdict-radius);
+  overflow-x: auto;
+  border: 1px solid var(--fleurdict-border-subtle);
+}
+
+.fleurdict-ai-modal-body blockquote {
+  border-left: 2px solid var(--fleurdict-accent);
+  padding-left: 14px;
+  color: var(--fleurdict-text-secondary);
+  margin: 10px 0;
+}
+
+.fleurdict-ai-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 14px;
+  background: var(--fleurdict-accent);
+  animation: fleurdict-cursor-blink 0.8s infinite;
+  vertical-align: middle;
+  margin-left: 2px;
+}
+
+@keyframes fleurdict-cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.fleurdict-ai-modal-footer {
+  display: flex;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--fleurdict-border-subtle);
+  flex-shrink: 0;
+  background: var(--fleurdict-bg-elevated);
+}
+
+.fleurdict-ai-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 36px;
+  gap: 14px;
+  color: var(--fleurdict-text-secondary);
+  font-size: 12px;
+}
+
+.fleurdict-ai-spinner {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--fleurdict-border-subtle);
+  border-top-color: var(--fleurdict-accent);
+  border-radius: 50%;
+  animation: fleurdict-spin 0.7s linear infinite;
+}
+
+@keyframes fleurdict-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================================================
+   Wordbook View — Sidebar
+   ============================================================================ */
+
+.fleurdict-wordbook-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0;
+  background: var(--fleurdict-bg);
+}
+
+/* Header with action buttons */
+.fleurdict-wordbook-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--fleurdict-border-subtle);
+  flex-shrink: 0;
+}
+
+.fleurdict-wordbook-stats {
+  display: flex;
+  gap: 6px;
+}
+
+.fleurdict-stat {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--fleurdict-text-secondary);
+  background: var(--fleurdict-bg-elevated);
+  padding: 3px 9px;
+  border-radius: 8px;
+  font-feature-settings: "tnum";
+  border: 1px solid var(--fleurdict-border-subtle);
+}
+
+.fleurdict-wordbook-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fleurdict-wordbook-actions .mod-cta,
+.fleurdict-wordbook-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11.5px !important;
+  padding: 0 14px !important;
+  border-radius: 999px !important;
+  height: 26px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.01em;
+  border: 1px solid var(--fleurdict-border-subtle);
+  background: var(--fleurdict-bg-elevated);
+  color: var(--fleurdict-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s var(--fleurdict-ease);
+}
+
+.fleurdict-wordbook-actions button:hover {
+  border-color: var(--fleurdict-primary-border);
+  color: var(--fleurdict-primary);
+  background: var(--fleurdict-primary-subtle);
+}
+
+/* Primary action — 开始复习 */
+.fleurdict-wordbook-actions button:first-child {
+  background: var(--fleurdict-primary) !important;
+  border-color: var(--fleurdict-primary) !important;
+  color: #ffffff !important;
+}
+
+.fleurdict-wordbook-actions button:first-child:hover {
+  background: var(--fleurdict-primary-hover) !important;
+  border-color: var(--fleurdict-primary-hover) !important;
+  color: #ffffff !important;
+}
+
+.fleurdict-wordbook-actions .mod-cta {
+  background: var(--fleurdict-primary) !important;
+  border-color: var(--fleurdict-primary) !important;
+  color: #ffffff !important;
+}
+
+.fleurdict-wordbook-actions .mod-cta:hover {
+  background: var(--fleurdict-primary-hover) !important;
+}
+
+/* Controls — context button */
+.fleurdict-wordbook-controls {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px 10px;
+  border-bottom: 1px solid var(--fleurdict-border-subtle);
+  flex-shrink: 0;
+  align-items: center;
+}
+
+/*
+ * Context mode button — flex layout for true vertical centering.
+ * The label is wrapped in a span so text-overflow ellipsis still works.
+ * Leading dot = live scope indicator; trailing chevron = dropdown affordance.
+ */
+.fleurdict-context-btn {
+  display: flex;
+  align-items: center;
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 0 32px 0 26px;
+  height: 32px;
+  border: 1px solid var(--fleurdict-border-subtle);
+  border-radius: var(--fleurdict-radius);
+  background: var(--fleurdict-bg-elevated);
+  color: var(--fleurdict-text);
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s var(--fleurdict-ease),
+              background 0.15s var(--fleurdict-ease),
+              box-shadow 0.15s var(--fleurdict-ease);
+}
+
+.fleurdict-context-btn-label {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Live scope dot */
+.fleurdict-context-btn::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  transform: translateY(-50%);
+  background: var(--fleurdict-primary);
+  box-shadow: 0 0 0 3px var(--fleurdict-primary-subtle);
+}
+
+/* Chevron (drawn with borders — no font dependency) */
+.fleurdict-context-btn::after {
+  content: '';
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid var(--fleurdict-text-tertiary);
+  border-bottom: 1.5px solid var(--fleurdict-text-tertiary);
+  transform: translateY(-65%) rotate(45deg);
+  transition: border-color 0.15s var(--fleurdict-ease);
+}
+
+.fleurdict-context-btn:hover {
+  border-color: var(--fleurdict-primary-border);
+  background: var(--fleurdict-primary-subtle);
+}
+
+.fleurdict-context-btn:hover::after {
+  border-color: var(--fleurdict-primary);
+}
+
+.fleurdict-context-btn:focus {
+  border-color: var(--fleurdict-primary-border);
+  box-shadow: 0 0 0 2px var(--fleurdict-primary-subtle);
+  outline: none;
+}
+
+.fleurdict-wordbook-search {
+  flex: 1;
+  padding: 7px 12px;
+  border: 1px solid var(--fleurdict-border-subtle);
+  border-radius: 8px;
+  background: var(--fleurdict-bg-elevated);
+  color: var(--fleurdict-text);
+  font-size: 12px;
+  outline: none;
+  transition: all 0.15s var(--fleurdict-ease);
+}
+
+.fleurdict-wordbook-search::placeholder {
+  color: var(--fleurdict-text-tertiary);
+}
+
+.fleurdict-wordbook-search:focus {
+  border-color: var(--fleurdict-primary-border);
+  background: var(--fleurdict-bg);
+  box-shadow: 0 0 0 3px var(--fleurdict-primary-subtle);
+}
+
+/* ContextSearchModal */
+.fleurdict-ctx-search {
+  padding: 8px;
+}
+
+.fleurdict-ctx-search h3 {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.fleurdict-ctx-search-bar {
+  margin-bottom: 12px;
+}
+
+.fleurdict-ctx-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--fleurdict-border-subtle);
+  border-radius: var(--fleurdict-radius);
+  background: var(--fleurdict-bg-elevated);
+  color: var(--fleurdict-text);
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s var(--fleurdict-ease),
+              box-shadow 0.15s var(--fleurdict-ease);
+}
+
+.fleurdict-ctx-search-input:focus {
+  border-color: var(--fleurdict-primary-border);
+  box-shadow: 0 0 0 3px var(--fleurdict-primary-subtle);
+}
+
+.fleurdict-ctx-search-list {
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid var(--fleurdict-border-subtle);
+  border-radius: var(--fleurdict-radius);
+  margin-bottom: 12px;
+}
+
+.fleurdict-ctx-search-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 12.5px;
+  border-bottom: 1px solid var(--fleurdict-border-subtle);
+  transition: background 0.1s var(--fleurdict-ease);
+}
+
+.fleurdict-ctx-search-item:last-child {
+  border-bottom: none;
+}
+
+.fleurdict-ctx-search-item:hover {
+  background: var(--fleurdict-bg-elevated);
+}
+
+.fleurdict-ctx-search-item.fleurdict-ctx-selected {
+  background: var(--fleurdict-primary-subtle);
+  box-shadow: inset 2px 0 0 var(--fleurdict-primary);
+}
+
+.fleurdict-ctx-search-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fleurdict-ctx-check {
+  margin-left: 8px;
+  color: var(--fleurdict-primary);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.fleurdict-ctx-search-parent {
+  color: var(--fleurdict-text-secondary);
+  font-style: italic;
+}
+
+.fleurdict-ctx-search-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--fleurdict-text-tertiary);
+  font-size: 12.5px;
+}
+
+.fleurdict-ctx-search-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.fleurdict-ctx-search-footer button {
+  padding: 6px 16px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.fleurdict-ctx-search-footer .mod-cta {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border: none;
+}
+
+/* Word list */
+.fleurdict-wordbook-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Thin, unobtrusive scrollbar */
+.fleurdict-wordbook-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.fleurdict-wordbook-list::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.18);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.fleurdict-wordbook-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Empty state — editorial, with icon + hint */
+.fleurdict-wordbook-empty {
+  margin-top: 56px;
+  text-align: center;
+  color: var(--fleurdict-text-tertiary);
+  font-size: 12.5px;
+}
+
+.fleurdict-wordbook-empty::before {
+  content: '';
+  display: block;
+  width: 36px;
+  height: 36px;
+  margin: 0 auto 14px;
+  opacity: 0.45;
+  background: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%238a8a8a' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z'/%3E%3Cpath d='M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z'/%3E%3C/svg%3E");
+}
+
+.fleurdict-wordbook-empty::after {
+  content: '阅读时选中文本，即可快速查词并加入生词本';
+  display: block;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--fleurdict-text-faint, var(--fleurdict-text-tertiary));
+}
+
+/* Word entry card */
+.fleurdict-wordbook-entry {
+  position: relative;
+  padding: 10px 12px 11px 14px;
+  border: 1px solid var(--fleurdict-border-subtle);
+  border-radius: var(--fleurdict-radius);
+  background: var(--fleurdict-bg);
+  transition: border-color 0.15s var(--fleurdict-ease),
+              background 0.15s var(--fleurdict-ease),
+              box-shadow 0.15s var(--fleurdict-ease);
+}
+
+.fleurdict-wordbook-entry:hover {
+  border-color: var(--fleurdict-primary-border);
+  background: var(--fleurdict-bg-elevated);
+  box-shadow: inset 2px 0 0 var(--fleurdict-primary),
+              var(--fleurdict-shadow-sm);
+}
+
+.fleurdict-wordbook-entry-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+  /* keep long words clear of the hover action buttons */
+  padding-right: 58px;
+}
+
+.fleurdict-wordbook-word {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--fleurdict-text);
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fleurdict-wordbook-phonetic {
+  font-size: 11px;
+  color: var(--fleurdict-text-tertiary);
+  font-family: var(--font-monospace);
+}
+
+.fleurdict-wordbook-entry-meta {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 6px;
+}
+
+.fleurdict-wordbook-category {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--fleurdict-primary-subtle);
+  color: var(--fleurdict-primary);
+}
+
+.fleurdict-wordbook-type {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--fleurdict-accent-subtle);
+  color: var(--fleurdict-accent);
+}
+
+.fleurdict-wordbook-meaning {
+  font-size: 12px;
+  color: var(--fleurdict-text-secondary);
+  line-height: 1.65;
+  margin-bottom: 2px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.fleurdict-wordbook-context {
+  font-size: 11px;
+  color: var(--fleurdict-text-tertiary);
+  font-style: italic;
+  border-left: 2px solid var(--fleurdict-primary-border);
+  padding-left: 10px;
+  margin-top: 6px;
+}
+
+.fleurdict-wordbook-note {
+  font-size: 11px;
+  color: var(--fleurdict-text-secondary);
+  margin-top: 6px;
+  padding: 5px 10px;
+  background: var(--fleurdict-bg-elevated);
+  border-left: 2px solid var(--fleurdict-border-subtle);
+  border-radius: 0 var(--fleurdict-radius-sm) var(--fleurdict-radius-sm) 0;
+}
+
+/* Action buttons — float to top-right on hover, save a row of height */
+.fleurdict-wordbook-entry-actions {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  display: flex;
+  gap: 2px;
+  margin: 0;
+  opacity: 0;
+  transform: translateY(-2px);
+  transition: opacity 0.15s var(--fleurdict-ease),
+              transform 0.15s var(--fleurdict-ease);
+}
+
+.fleurdict-wordbook-entry:hover .fleurdict-wordbook-entry-actions,
+.fleurdict-wordbook-entry-actions button:focus-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.fleurdict-wordbook-entry-actions button {
+  width: 24px !important;
+  height: 24px !important;
+  padding: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--fleurdict-radius-sm) !important;
+  border: 1px solid transparent;
+  background: var(--fleurdict-bg-elevated);
+  color: var(--fleurdict-text-tertiary);
+  cursor: pointer;
+  transition: color 0.15s var(--fleurdict-ease),
+              background 0.15s var(--fleurdict-ease);
+}
+
+.fleurdict-wordbook-entry-actions button:hover {
+  color: var(--fleurdict-primary);
+  background: var(--fleurdict-primary-subtle);
+}
+
+.fleurdict-wordbook-entry-actions button[aria-label='删除']:hover {
+  color: var(--text-error, #e5484d);
+  background: rgba(229, 72, 77, 0.08);
+}
+
+/* ============================================================================
+   Edit Entry Modal
+   ============================================================================ */
+
+.fleurdict-edit-modal {
+  max-width: 500px;
+}
+
+.fleurdict-edit-modal h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--fleurdict-text);
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--fleurdict-border-subtle);
+}
+
+.fleurdict-edit-modal .setting-item {
+  margin-bottom: 16px;
+}
+
+.fleurdict-edit-modal .setting-item-control textarea {
+  width: 100%;
+  min-height: 80px;
+  resize: vertical;
+}
+
+.fleurdict-edit-modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--fleurdict-border-subtle);
+}
+
+.fleurdict-edit-modal-actions button {
+  padding: 8px 20px;
+  border-radius: 6px;
+  border: 1px solid var(--fleurdict-border);
+  background: var(--fleurdict-bg-elevated);
+  color: var(--fleurdict-text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.fleurdict-edit-modal-actions button.mod-cta {
+  background: var(--fleurdict-primary);
+  border-color: var(--fleurdict-primary);
+  color: white;
+}
+
+.fleurdict-edit-modal-actions button:hover {
+  background: var(--fleurdict-primary-subtle);
+  color: var(--fleurdict-primary);
+}
+
+.fleurdict-edit-modal-actions button.mod-cta:hover {
+  background: var(--fleurdict-primary);
+  color: white;
+}
+
+}
+
+.fleurdict-wordbook-empty {
+  text-align: center;
+  color: var(--fleurdict-text-tertiary);
+  padding: 40px 16px;
+  font-size: 12px;
+}
+
+/* ============================================================================
+   Dark Theme
+   ============================================================================ */
+
+.theme-dark {
+  --fleurdict-primary: #2dd4bf;
+  --fleurdict-primary-hover: #5eead4;
+  --fleurdict-primary-subtle: rgba(45, 212, 191, 0.1);
+  --fleurdict-primary-border: rgba(45, 212, 191, 0.2);
+  --fleurdict-accent: #818cf8;
+  --fleurdict-accent-subtle: rgba(129, 140, 248, 0.1);
+  --fleurdict-border-subtle: rgba(255, 255, 255, 0.06);
+  --fleurdict-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --fleurdict-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  --fleurdict-shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.theme-dark .fleurdict-popup,
+.theme-dark .fleurdict-popup-content {
+  background: #1e1e1e !important;
+  background-color: #1e1e1e !important;
+  color: #e4e4e4;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.theme-dark .fleurdict-flashcard-face {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.02) 0%,
+    rgba(255, 255, 255, 0.01) 100%
+  );
+}
+
+.theme-dark .fleurdict-rating-again:hover {
+  background: rgba(225, 29, 72, 0.12);
+}
+
+.theme-dark .fleurdict-rating-hard:hover {
+  background: rgba(217, 119, 6, 0.12);
+}
+
+/* ============================================================================
+   Smooth Transitions
+   ============================================================================ */
+
+/* NOTE: .fleurdict-popup intentionally excluded from global transitions
+   to prevent drag lag (transition on left/top causes 150ms animation delay) */
+
+.fleurdict-wordbook-entry,
+.fleurdict-action-btn,
+.fleurdict-flashcard-rating-btn,
+.fleurdict-audio-btn {
+  transition: all 0.15s var(--fleurdict-ease);
+}
+
+
+/* ============================================================================
+   Scrollbar refinement
+   ============================================================================ */
+
+.fleurdict-wordbook-list::-webkit-scrollbar,
+.fleurdict-popup-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.fleurdict-wordbook-list::-webkit-scrollbar-track,
+.fleurdict-popup-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.fleurdict-wordbook-list::-webkit-scrollbar-thumb,
+.fleurdict-popup-body::-webkit-scrollbar-thumb {
+  background: var(--fleurdict-border);
+  border-radius: 3px;
+}
+
+.fleurdict-wordbook-list::-webkit-scrollbar-thumb:hover,
+.fleurdict-popup-body::-webkit-scrollbar-thumb:hover {
+  background: var(--fleurdict-text-tertiary);
+}
+
+/* ============================================================================
+   AI Sidebar (Legacy classes)
+   ============================================================================ */
+
+.fleurdict-ai-sidebar,
+.fleurdict-sidebar-chat {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--fleurdict-bg);
+}
+
+.fleurdict-sidebar-header,
+.fleurdict-ai-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--fleurdict-border-subtle);
+  flex-shrink: 0;
+}
+
+.fleurdict-sidebar-title,
+.fleurdict-ai-sidebar-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fleurdict-text);
+}
+
+.fleurdict-sidebar-clear,
+.fleurdict-ai-sidebar-clear {
+  padding: 4px 10px;
+  border: 1px solid var(--fleurdict-border-subtle);
+  border-radius: 100px;
+  background: var(--fleurdict-bg);
+  color: var(--fleurdict-text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s var(--fleurdict-ease);
+}
+
+.fleurdict-sidebar-clear:hover,
+.fleurdict-ai-sidebar-clear:hover {
+  background: var(--fleurdict-bg-elevated);
+  color: var(--fleurdict-text);
+}
+
+.fleurdict-sidebar-input-area,
+.fleurdict-ai-sidebar-input-area {
+  display: flex;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--fleurdict-border-subtle);
+  flex-shrink: 0;
+}
+
+.fleurdict-sidebar-input,
+.fleurdict-ai-sidebar-input {
+  flex: 1;
+  padding: 8px 14px;
+  border: 1px solid var(--fleurdict-border-subtle);
+  border-radius: 100px;
+  background: var(--fleurdict-bg-elevated);
+  color: var(--fleurdict-text);
+  font-size: 13px;
+  outline: none;
+  resize: none;
+  font-family: inherit;
+  transition: all 0.15s var(--fleurdict-ease);
+}
+
+.fleurdict-sidebar-input:focus,
+.fleurdict-ai-sidebar-input:focus {
+  border-color: var(--fleurdict-primary-border);
+  background: var(--fleurdict-bg);
+  box-shadow: 0 0 0 3px var(--fleurdict-primary-subtle);
+}
+
+.fleurdict-send-btn,
+.fleurdict-ai-sidebar-send {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: var(--fleurdict-primary);
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.15s var(--fleurdict-ease);
+  flex-shrink: 0;
+}
+
+.fleurdict-send-btn:hover,
+.fleurdict-ai-sidebar-send:hover {
+  background: var(--fleurdict-primary-hover);
+  transform: scale(1.05);
+}
+
+.fleurdict-stop-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: #e11d48;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.15s var(--fleurdict-ease);
+  flex-shrink: 0;
+}
+
+.fleurdict-stop-btn:hover {
+  background: #f43f5e;
+}
+
+/* Messages */
+.fleurdict-message,
+.fleurdict-ai-sidebar-msg {
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border-radius: var(--fleurdict-radius);
+  font-size: 13px;
+  line-height: 1.65;
+  max-width: 95%;
+}
+
+.fleurdict-message-user,
+.fleurdict-ai-sidebar-msg-user {
+  background: var(--fleurdict-bg-elevated);
+  color: var(--fleurdict-text);
+  margin-left: auto;
+  border: 1px solid var(--fleurdict-border-subtle);
+}
+
+.fleurdict-message-ai,
+.fleurdict-ai-sidebar-msg-ai {
+  background: var(--fleurdict-primary-subtle);
+  color: var(--fleurdict-text);
+  margin-right: auto;
+  border: 1px solid var(--fleurdict-primary-border);
+}
+
+.fleurdict-message-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--fleurdict-primary);
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.fleurdict-message-body {
+  margin-top: 4px;
+}
+
+.fleurdict-message-loading {
+  display: inline-flex;
+  gap: 4px;
+  padding: 8px 12px;
+}
+
+.fleurdict-message-loading::after {
+  content: '...';
+  animation: fleurdict-dots 1.4s infinite;
+}
+
+@keyframes fleurdict-dots {
+  0%, 20% { content: '.'; }
+  40% { content: '..'; }
+  60%, 100% { content: '...'; }
+}
+
+/* ============================================================================
+   Quick Actions & Buttons
+   ============================================================================ */
+
+.fleurdict-quick-actions {
+  display: flex;
+  gap: 8px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--fleurdict-border-subtle);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.fleurdict-quick-btn,
+.fleurdict-button-row button {
+  padding: 6px 14px;
+  border: 1px solid var(--fleurdict-border-subtle);
+  border-radius: 100px;
+  background: var(--fleurdict-bg);
+  color: var(--fleurdict-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s var(--fleurdict-ease);
+}
+
+.fleurdict-quick-btn:hover,
+.fleurdict-button-row button:hover {
+  background: var(--fleurdict-primary-subtle);
+  border-color: var(--fleurdict-primary-border);
+  color: var(--fleurdict-primary);
+}
+
+.fleurdict-ai-buttons {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.fleurdict-ai-content {
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: var(--fleurdict-bg-elevated);
+  border-radius: var(--fleurdict-radius);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+/* ============================================================================
+   Welcome Screens
+   ============================================================================ */
+
+.fleurdict-welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  gap: 14px;
+}
+
+.fleurdict-welcome-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 1.5px solid var(--fleurdict-primary-border);
+  background: var(--fleurdict-primary-subtle);
+  color: var(--fleurdict-primary);
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+
+.fleurdict-welcome-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--fleurdict-text);
+  letter-spacing: -0.01em;
+}
+
+.fleurdict-welcome-hint {
+  font-size: 12px;
+  color: var(--fleurdict-text-tertiary);
+  line-height: 1.6;
+  max-width: 320px;
+}
+
+.fleurdict-welcome-warning {
+  font-size: 11px;
+  color: #d97706;
+  background: rgba(217, 119, 6, 0.08);
+  padding: 8px 12px;
+  border-radius: var(--fleurdict-radius-sm);
+  border-left: 2px solid #d97706;
+  margin-top: 8px;
+}
+
+/* ============================================================================
+   Lookup & Export (Command palette items)
+   ============================================================================ */
+
+.fleurdict-lookup,
+.fleurdict-export-wordbook,
+.fleurdict-open-wordbook,
+.fleurdict-add-to-wordbook,
+.fleurdict-close-popup {
+  /* These are typically command IDs, not visual classes */
+  /* No styling needed unless they're used as visual elements */
+}
+
+.fleurdict-lookup-input {
+  width: 100%;
+  padding: 10px 16px;
+  border: 1px solid var(--fleurdict-border-subtle);
+  border-radius: 100px;
+  background: var(--fleurdict-bg-elevated);
+  color: var(--fleurdict-text);
+  font-size: 14px;
+  outline: none;
+  transition: all 0.15s var(--fleurdict-ease);
+}
+
+.fleurdict-lookup-input:focus {
+  border-color: var(--fleurdict-primary-border);
+  background: var(--fleurdict-bg);
+  box-shadow: 0 0 0 3px var(--fleurdict-primary-subtle);
+}
+
+/* ============================================================================
+   Flashcard Variants
+   ============================================================================ */
+
+.fleurdict-flashcard-front,
+.fleurdict-flashcard-review {
+  /* These are likely modifiers of .fleurdict-flashcard-face */
+  /* Inherit base styles from .fleurdict-flashcard-face */
+}
+
+/* ============================================================================
+   Responsive
+   ============================================================================ */
+
+@media (max-width: 768px) {
+  .fleurdict-popup {
+    left: 16px !important;
+    right: 16px !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+
+  .fleurdict-flashcard-word {
+    font-size: 22px;
+  }
+
+  .fleurdict-flashcard-rating-buttons {
+    flex-wrap: wrap;
+  }
+
+  .fleurdict-wordbook-controls {
+    flex-direction: column;
+  }
+
+  .fleurdict-context-btn {
+    max-width: 100%;
+  }
+}

@@ -1,0 +1,352 @@
+/**
+ * FleurDict - Main Plugin Entry
+ * An elegant English dictionary plugin for Obsidian
+ */
+
+import { Plugin, Notice, WorkspaceLeaf } from 'obsidian';
+import { FleurDictSettings, DEFAULT_SETTINGS } from './types';
+import { DictionaryEngine } from './core/dictionary-engine';
+import { WordbookManager } from './core/wordbook-manager';
+import { FlashcardEngine } from './core/flashcard-engine';
+import { LLMService } from './core/llm-service';
+import { EudicService } from './core/eudic-service';
+import { SelectionHandler } from './features/selection-handler';
+import { ContextMenuManager } from './features/context-menu';
+import { CommandManager } from './features/commands';
+import { FleurDictSettingTab } from './settings';
+import { showAITranslation, showAIDetail } from './ui/ai-modal';
+import { AISidebarView, AI_SIDEBAR_VIEW_TYPE } from './ui/ai-sidebar';
+import { FlashcardModal } from './ui/flashcard-modal';
+import { WordbookView, WORDBOOK_VIEW_TYPE } from './ui/wordbook-view';
+
+/**
+ * FleurDict Plugin
+ */
+export default class FleurDictPlugin extends Plugin {
+  settings: FleurDictSettings = DEFAULT_SETTINGS;
+  dictEngine!: DictionaryEngine;
+  wordbookManager!: WordbookManager;
+  flashcardEngine!: FlashcardEngine;
+  llmService!: LLMService;
+  eudicService!: EudicService;
+  selectionHandler!: SelectionHandler;
+  contextMenuManager!: ContextMenuManager;
+  commandManager!: CommandManager;
+
+  async onload() {
+    console.log('[FleurDict-DIAG] === Plugin loading BUILD v2026-08-22-1925 ===');
+    console.log('[FleurDict-DIAG] Loading plugin...');
+
+    // Load settings
+    await this.loadSettings();
+
+    // Initialize core modules
+    this.dictEngine = new DictionaryEngine(this, this.settings);
+    this.wordbookManager = new WordbookManager(this, this.settings);
+    this.flashcardEngine = new FlashcardEngine();
+    this.llmService = new LLMService(this.settings);
+    this.eudicService = new EudicService(this, this.settings);
+
+    // Load wordbook data
+    await this.wordbookManager.load();
+
+    // Initialize UI modules
+    this.selectionHandler = new SelectionHandler(this, this.settings, this.dictEngine);
+    this.contextMenuManager = new ContextMenuManager(this, this.settings, this.selectionHandler);
+    this.commandManager = new CommandManager(
+      this,
+      this.settings,
+      this.selectionHandler,
+      this.wordbookManager,
+      this.flashcardEngine
+    );
+
+    // Register event handlers
+    this.selectionHandler.register();
+    this.contextMenuManager.register();
+    this.commandManager.register();
+
+    // Register settings tab
+    this.addSettingTab(new FleurDictSettingTab(this.app, this));
+
+    // Register AI sidebar view
+    this.registerView(AI_SIDEBAR_VIEW_TYPE, (leaf) => {
+      return new AISidebarView(leaf, this.settings, this.llmService);
+    });
+
+    // Register wordbook view
+    this.registerView(WORDBOOK_VIEW_TYPE, (leaf) => {
+      return new WordbookView(leaf, this.settings, this.wordbookManager, this.dictEngine);
+    });
+
+    // Register workspace events
+    this.registerWorkspaceEvents();
+
+    // Ribbon: 只保留生词本入口（查词走右键菜单，AI 走右键菜单）
+    this.addRibbonIcon('book-open', 'FleurDict 生词本', () => {
+      this.activateWordbookView();
+    });
+
+    console.log('FleurDict: Plugin loaded successfully');
+  }
+
+  onunload() {
+    console.log('FleurDict: Unloading plugin...');
+
+    // Unregister event handlers
+    this.selectionHandler.unregister();
+  }
+
+  /**
+   * Load settings from storage
+   */
+  async loadSettings() {
+    const data = await this.loadData();
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, data?.settings);
+    // Fix migration: ensure dictionarySource is always set
+    if (!this.settings.dictionarySource || this.settings.dictionarySource === undefined) {
+      this.settings.dictionarySource = 'youdao';
+    }
+    console.log('FleurDict: Loaded settings, dictionarySource =', this.settings.dictionarySource);
+  }
+
+  /**
+   * Save settings to storage
+   */
+  async saveSettings() {
+    const data = (await this.loadData()) || {};
+    data.settings = this.settings;
+    await this.saveData(data);
+
+    // Update all modules with new settings
+    this.dictEngine.updateSettings(this.settings);
+    this.wordbookManager.updateSettings(this.settings);
+    this.llmService.updateSettings(this.settings);
+    this.selectionHandler.updateSettings(this.settings);
+    this.contextMenuManager.updateSettings(this.settings);
+    this.commandManager.updateSettings(this.settings);
+  }
+
+  /**
+   * Register workspace event handlers
+   */
+  private registerWorkspaceEvents() {
+    // Add to wordbook
+    this.registerEvent(
+      this.app.workspace.on('fleurdict:add-to-wordbook', async (word: string) => {
+        await this.addToWordbook(word);
+      })
+    );
+
+    // AI detail
+    this.registerEvent(
+      this.app.workspace.on('fleurdict:ai-detail', (word: string) => {
+        this.showAIDetail(word);
+      })
+    );
+
+    // AI translate
+    this.registerEvent(
+      this.app.workspace.on('fleurdict:ai-translate', (text: string) => {
+        this.showAITranslate(text);
+      })
+    );
+
+    // Start flashcard
+    this.registerEvent(
+      this.app.workspace.on('fleurdict:start-flashcard', () => {
+        this.startFlashcard();
+      })
+    );
+
+    // Export wordbook
+    this.registerEvent(
+      this.app.workspace.on('fleurdict:export-wordbook', () => {
+        this.exportWordbook();
+      })
+    );
+  }
+
+  /**
+   * Add a word to wordbook
+   */
+  private async addToWordbook(word: string) {
+    try {
+      // Query dictionary for meaning
+      const results = await this.dictEngine.query(word);
+      let meaning = '';
+      let phonetic = '';
+      let audioUrlUK: string | undefined;
+      let audioUrlUS: string | undefined;
+
+      if (results.length > 0 && results[0].entries.length > 0) {
+        const entry = results[0].entries[0];
+        meaning = DictionaryEngine.getFirstDefinition(entry);
+        phonetic = DictionaryEngine.getPhonetic(entry);
+        // Extract UK/US audio URLs from phonetics
+        for (const p of entry.phonetics) {
+          if (p.text?.startsWith('英') && p.audio) audioUrlUK = p.audio;
+          if (p.text?.startsWith('美') && p.audio) audioUrlUS = p.audio;
+        }
+      }
+
+      // Get context from current selection
+      const selection = window.getSelection();
+      const context = selection?.toString().trim() || undefined;
+
+      // Add to local wordbook
+      await this.wordbookManager.addEntry(word, meaning, phonetic, context, undefined, audioUrlUK, audioUrlUS);
+
+      // Refresh wordbook view if open
+      const leaves = this.app.workspace.getLeavesOfType(WORDBOOK_VIEW_TYPE);
+      for (const leaf of leaves) {
+        const view = leaf.view as any;
+        if (typeof view.refresh === 'function') {
+          view.refresh();
+        }
+      }
+
+      // Sync to Eudic if enabled
+      if (this.settings.eudicEnabled && this.settings.eudicToken) {
+        try {
+          await this.eudicService.addWord(word, context);
+          new Notice(`✓ "${word}" 已加入生词本并同步到欧路`);
+        } catch (e) {
+          console.warn('FleurDict: Eudic sync failed for', word, e);
+          new Notice(`✓ "${word}" 已加入本地生词本（欧路同步失败）`);
+        }
+      } else {
+        new Notice(`✓ "${word}" 已加入生词本`);
+      }
+    } catch (error) {
+      console.error('FleurDict: Failed to add to wordbook:', error);
+      new Notice(`加入生词本失败：${error}`);
+    }
+  }
+
+  /**
+   * Show AI detail for a word
+   */
+  private async showAIDetail(word: string, context?: string) {
+    if (!this.settings.aiApiKey) {
+      new Notice('请先在设置中配置 AI API Key');
+      return;
+    }
+
+    await showAIDetail(this.app, this.settings, this.llmService, word, context, this);
+  }
+
+  /**
+   * Show AI translate
+   */
+  private async showAITranslate(text: string, context?: string) {
+    if (!this.settings.aiApiKey) {
+      new Notice('请先在设置中配置 AI API Key');
+      return;
+    }
+
+    await showAITranslation(this.app, this.settings, this.llmService, text, context, this);
+  }
+
+  /**
+   * Start flashcard review
+   */
+  private startFlashcard() {
+    const dueEntries = this.wordbookManager.getDueEntries();
+
+    if (dueEntries.length === 0) {
+      new Notice('今日没有需要复习的单词');
+      return;
+    }
+
+    // Start session
+    this.flashcardEngine.startSession(
+      'due',
+      dueEntries,
+      undefined,
+      this.settings.dailyReviewLimit
+    );
+
+    // Open flashcard modal
+    const session = this.flashcardEngine.getSession();
+    if (!session) {
+      new Notice('无法启动复习会话');
+      return;
+    }
+
+    const modal = new FlashcardModal(
+      this.app,
+      this.settings,
+      this.flashcardEngine,
+      session,
+      () => {
+        // Update callback - refresh wordbook view if open
+        const leaves = this.app.workspace.getLeavesOfType(WORDBOOK_VIEW_TYPE);
+        if (leaves.length > 0) {
+          const view = leaves[0].view as WordbookView;
+          view.refresh();
+        }
+      }
+    );
+    modal.open();
+  }
+
+  /**
+   * Export wordbook to Markdown
+   */
+  private async exportWordbook() {
+    const markdown = this.wordbookManager.exportToMarkdown();
+
+    // Create a new note with the export
+    const fileName = `FleurDict-生词本-${new Date().toISOString().slice(0, 10)}.md`;
+    const file = await this.app.vault.create(fileName, markdown);
+
+    // Open the file
+    const leaf = this.app.workspace.getLeaf('tab');
+    await leaf.openFile(file);
+
+    new Notice(`✓ 生词本已导出到 ${fileName}`);
+  }
+
+  /**
+   * Activate AI sidebar view
+   */
+  async activateAISidebar() {
+    const { workspace } = this.app;
+
+    let leaf: WorkspaceLeaf | null = null;
+    const leaves = workspace.getLeavesOfType(AI_SIDEBAR_VIEW_TYPE);
+
+    if (leaves.length > 0) {
+      // A leaf with our view already exists, simply reveal it
+      workspace.revealLeaf(leaves[0]);
+    } else {
+      // Create a new leaf in the right sidebar
+      leaf = workspace.getRightLeaf(false);
+      if (leaf) {
+        await leaf.setViewState({ type: AI_SIDEBAR_VIEW_TYPE, active: true });
+        workspace.revealLeaf(leaf);
+      }
+    }
+  }
+
+  /**
+   * Activate wordbook sidebar view
+   */
+  async activateWordbookView() {
+    const { workspace } = this.app;
+
+    let leaf: WorkspaceLeaf | null = null;
+    const leaves = workspace.getLeavesOfType(WORDBOOK_VIEW_TYPE);
+
+    if (leaves.length > 0) {
+      workspace.revealLeaf(leaves[0]);
+    } else {
+      leaf = workspace.getRightLeaf(false);
+      if (leaf) {
+        await leaf.setViewState({ type: WORDBOOK_VIEW_TYPE, active: true });
+        workspace.revealLeaf(leaf);
+      }
+    }
+  }
+}

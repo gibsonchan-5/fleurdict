@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  /* Simulate Obsidian popup environment */
+  body { font-family: -apple-system, sans-serif; background: #f5f5f5; padding: 20px; }
+
+  /* Current CSS for audio btn */
+  .fleurdict-audio-btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid #d0d0d0;
+    border-radius: 50%;
+    background: #f0f0f0;
+    color: #0ea5a4;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 5px;
+  }
+  .fleurdict-audio-btn svg {
+    width: 18px !important;
+    height: 18px !important;
+    stroke-width: 2.25;
+  }
+  .fleurdict-audio-btn:hover {
+    background: #0ea5a4;
+    color: #fff;
+  }
+
+  /* Test: emoji as text */
+  .btn-emoji {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px; height: 36px;
+    border: 1px solid #d0d0d0;
+    border-radius: 50%;
+    background: #f0f0f0;
+    cursor: pointer;
+    font-size: 18px;
+    padding: 0;
+    margin-left: 5px;
+  }
+
+  /* Test: unicode character */
+  .btn-unicode {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px; height: 36px;
+    border: 1px solid #d0d0d0;
+    border-radius: 50%;
+    background: #f0f0f0;
+    cursor: pointer;
+    font-size: 18px;
+    color: #0ea5a4;
+    padding: 0;
+    margin-left: 5px;
+  }
+
+  /* Test: inline SVG via innerHTML */
+  .btn-inline-svg {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px; height: 36px;
+    border: 1px solid #d0d0d0;
+    border-radius: 50%;
+    background: #f0f0f0;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 5px;
+  }
+  .btn-inline-svg svg {
+    width: 18px; height: 18px;
+  }
+</style>
+</head>
+<body>
+
+<h3>Test 1: setIcon-style SVG (createElementNS)</h3>
+<div id="test1"></div>
+
+<h3>Test 2: Emoji text</h3>
+<button class="btn-emoji">🔊</button>
+
+<h3>Test 3: Unicode char ●</h3>
+<button class="btn-unicode">&#9679;</button>
+
+<h3>Test 4: Inline SVG innerHTML</h3>
+<button class="btn-inline-svg">
+  <svg viewBox="0 0 24 24" fill="none" stroke="#0ea5a4" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+    <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+    <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+  </svg>
+</button>
+
+<h3>Test 5: SVG as button CSS background</h3>
+<button style="width:36px;height:36px;border-radius:50%;border:1px solid #d0d0d0;background:#f0f0f0 url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%230ea5a4%22 stroke-width=%222.25%22><path d=%22M11 5L6 9H2v6h4l5 4V5z%22/><path d=%22M15.54 8.46a5 5 0 0 1 0 7.07%22/><path d=%22M19.07 4.93a10 10 0 0 1 0 14.14%22/></svg>') center/18px no-repeat;cursor:pointer"></button>
+
+<script>
+// Test 1: Simulate setIcon (createElementNS)
+function testSetIcon(el) {
+  el.innerHTML = '';
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  svg.setAttribute('width', '24');
+  svg.setAttribute('height', '24');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '2');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+
+  const path1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path1.setAttribute('d', 'M11 5L6 9H2v6h4l5 4V5z');
+  svg.appendChild(path1);
+  const path2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path2.setAttribute('d', 'M15.54 8.46a5 5 0 0 1 0 7.07');
+  svg.appendChild(path2);
+  const path3 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path3.setAttribute('d', 'M19.07 4.93a10 10 0 0 1 0 14.14');
+  svg.appendChild(path3);
+  el.appendChild(svg);
+}
+
+const btn = document.createElement('button');
+btn.className = 'fleurdict-audio-btn';
+document.getElementById('test1').appendChild(btn);
+testSetIcon(btn);
+</script>
+</body>
+</html>
