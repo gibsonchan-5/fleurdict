@@ -95,6 +95,10 @@ export default class FleurDictPlugin extends Plugin {
 
     // Unregister event handlers
     this.selectionHandler.unregister();
+
+    // Detach custom views to prevent "error while closing"
+    this.app.workspace.detachLeavesOfType(AI_SIDEBAR_VIEW_TYPE);
+    this.app.workspace.detachLeavesOfType(WORDBOOK_VIEW_TYPE);
   }
 
   /**

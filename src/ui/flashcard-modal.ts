@@ -198,12 +198,11 @@ export class FlashcardModal extends Modal {
 
       const buttonsEl = ratingEl.createEl('div', { cls: 'fleurdict-flashcard-rating-buttons' });
 
-      // Rating buttons: Again, Hard, Good, Easy
-      const ratings: { label: string; rating: FlashcardRating; cls: string }[] = [
+      // Rating buttons: 忘了 / 记得 / 跳过
+      const ratings: { label: string; rating: FlashcardRating | null; cls: string }[] = [
         { label: '忘了', rating: 1, cls: 'fleurdict-rating-again' },
-        { label: '困难', rating: 3, cls: 'fleurdict-rating-hard' },
-        { label: '良好', rating: 4, cls: 'fleurdict-rating-good' },
-        { label: '简单', rating: 5, cls: 'fleurdict-rating-easy' },
+        { label: '记得', rating: 4, cls: 'fleurdict-rating-good' },
+        { label: '跳过', rating: null, cls: 'fleurdict-rating-skip' },
       ];
 
       for (const r of ratings) {
@@ -212,24 +211,21 @@ export class FlashcardModal extends Modal {
           cls: `fleurdict-flashcard-rating-btn ${r.cls}`,
         });
         btn.addEventListener('click', () => {
-          this.handleRating(r.rating);
+          if (r.rating === null) {
+            // Skip: no rating, just move to next card
+            this.engine.nextCard();
+            this.isFlipped = false;
+            this.onUpdate();
+            this.renderCard();
+          } else {
+            this.handleRating(r.rating);
+          }
         });
       }
     }
 
-    // Footer with controls
+    // Footer with controls (no skip button — it's now a rating button)
     const footerEl = contentEl.createEl('div', { cls: 'fleurdict-flashcard-footer' });
-
-    // Skip button
-    const skipBtn = footerEl.createEl('button', {
-      text: '跳过',
-      cls: 'fleurdict-flashcard-skip-btn',
-    });
-    skipBtn.addEventListener('click', () => {
-      this.engine.nextCard();
-      this.isFlipped = false;
-      this.renderCard();
-    });
 
     // Stats
     const statsEl = footerEl.createEl('div', { cls: 'fleurdict-flashcard-stats' });

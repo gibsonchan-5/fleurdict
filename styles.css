@@ -397,7 +397,7 @@
 
 .fleurdict-settings {
   max-width: 720px;
-  padding: 4px 16px 32px;
+  padding: 24px 16px 32px;
 }
 
 .fleurdict-settings-section {
@@ -534,38 +534,60 @@
   box-shadow: 0 0 0 3px var(--fleurdict-primary-subtle);
 }
 
-/* Toggle switches — override Obsidian's native toggle */
+/* Toggle — "light up" style: filled pill with on/off text, no sliding knob */
 .fleurdict-settings .checkbox-container {
-  position: relative;
-  display: inline-block;
-  width: 40px !important;
-  height: 24px !important;
-  border-radius: 12px !important;
-  background: var(--fleurdict-border-subtle);
-  border: none;
-  cursor: pointer;
-  transition: background 0.15s var(--fleurdict-ease);
-  box-sizing: border-box;
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 52px !important;
+  height: 26px !important;
+  border-radius: 13px !important;
+  background: var(--fleurdict-border-subtle) !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: background 0.2s var(--fleurdict-ease) !important;
+  box-sizing: border-box !important;
   transform: none !important;
   zoom: normal !important;
+}
+
+.fleurdict-settings .checkbox-container::after {
+  content: '关' !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: auto !important;
+  height: auto !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  position: absolute !important;
+  color: var(--fleurdict-text-tertiary) !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  line-height: 1 !important;
+  background: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  transform: none !important;
+  zoom: normal !important;
+  transition: none !important;
 }
 
 .fleurdict-settings .checkbox-container.is-enabled {
-  background: var(--fleurdict-primary);
+  background: var(--fleurdict-primary) !important;
 }
 
-/* Override Obsidian's native knob (::after or child element) for size + centering */
-.fleurdict-settings .checkbox-container::after,
+.fleurdict-settings .checkbox-container.is-enabled::after {
+  content: '开' !important;
+  color: #fff !important;
+}
+
+/* Hide Obsidian/Things native knob child element */
 .fleurdict-settings .checkbox-container > * {
-  width: 16px !important;
-  height: 16px !important;
-  top: 4px !important;
-  left: 4px !important;
-  right: auto !important;
-  bottom: auto !important;
-  transform: none !important;
-  zoom: normal !important;
-  box-sizing: border-box;
+  display: none !important;
 }
 
 /* Sliders */
@@ -917,29 +939,18 @@
   background: var(--fleurdict-accent-subtle);
 }
 
+.fleurdict-rating-skip:hover {
+  border-color: var(--fleurdict-border);
+  color: var(--fleurdict-text-tertiary);
+  background: var(--fleurdict-bg-elevated);
+}
+
 .fleurdict-flashcard-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-top: 18px;
   width: 100%;
-}
-
-.fleurdict-flashcard-skip-btn {
-  padding: 6px 14px;
-  border: 1px solid var(--fleurdict-border-subtle);
-  border-radius: 100px;
-  background: var(--fleurdict-bg);
-  color: var(--fleurdict-text-tertiary);
-  font-size: 11px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s var(--fleurdict-ease);
-}
-
-.fleurdict-flashcard-skip-btn:hover {
-  background: var(--fleurdict-bg-elevated);
-  color: var(--fleurdict-text-secondary);
 }
 
 .fleurdict-flashcard-stats {
@@ -2189,3 +2200,100 @@
     max-width: 100%;
   }
 }
+
+/* ============================================================================
+   Disclaimer Section (数据来源与免责声明)
+   ============================================================================ */
+
+.fleurdict-disclaimer {
+  margin-top: 24px;
+  padding: 16px;
+  background: var(--background-secondary-alt);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.fleurdict-disclaimer h3 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-normal);
+  border-bottom: 1px solid var(--background-modifier-border);
+  padding-bottom: 8px;
+}
+
+.fleurdict-disclaimer p {
+  margin: 0 0 8px 0;
+  color: var(--text-muted);
+}
+
+.fleurdict-disclaimer ul {
+  margin: 8px 0;
+  padding-left: 20px;
+  color: var(--text-muted);
+}
+
+.fleurdict-disclaimer li {
+  margin-bottom: 6px;
+}
+
+.fleurdict-disclaimer-warning {
+  color: var(--text-warning) !important;
+  font-weight: 500;
+}
+
+.fleurdict-disclaimer a {
+  color: var(--text-accent);
+  text-decoration: none;
+}
+
+.fleurdict-disclaimer a:hover {
+  text-decoration: underline;
+}
+
+/* Subtitle styling for settings sections */
+.fleurdict-settings-subtitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-normal);
+  margin-top: 16px;
+  margin-bottom: 12px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+/* Disclaimer text block styling */
+.fleurdict-disclaimer-text {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.fleurdict-disclaimer-text p {
+  margin: 8px 0;
+}
+
+.fleurdict-disclaimer-warning {
+  color: var(--text-warning);
+  font-weight: 600;
+  margin-top: 16px !important;
+}
+
+.fleurdict-disclaimer-warning-list {
+  padding-left: 24px;
+}
+
+.fleurdict-disclaimer-warning-list li {
+  margin-bottom: 4px;
+  line-height: 1.5;
+}
+
+.fleurdict-disclaimer-footer {
+  margin-top: 16px !important;
+  font-size: 11px;
+  color: var(--text-faint);
+  font-style: italic;
+}
+

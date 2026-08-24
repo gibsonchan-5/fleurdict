@@ -460,16 +460,36 @@ export class WordbookView extends ItemView {
       return;
     }
 
-    // Render entries (re-query Youdao for fresh meanings)
+    // Phase 1: render all entries immediately with stored meanings
+    const meaningEls: Map<string, Element> = new Map();
     for (const entry of entries) {
-      await this.renderEntry(listEl, entry);
+      try {
+        const meaningEl = await this.renderEntry(listEl, entry);
+        if (meaningEl) meaningEls.set(entry.word, meaningEl);
+      } catch (e) {
+        console.error(`[FleurDict] Failed to render entry "${entry.word}":`, e);
+      }
+    }
+
+    // Phase 2: async refresh Youdao meanings (non-blocking)
+    for (const entry of entries) {
+      if (this.meaningCache.has(entry.word)) continue;
+      try {
+        const fresh = await this.getYoudaoMeaning(entry.word);
+        if (fresh && meaningEls.has(entry.word)) {
+          const el = meaningEls.get(entry.word)!;
+          el.setText(fresh);
+        }
+      } catch {
+        // keep stored meaning
+      }
     }
   }
 
   /**
    * Render a single word entry — word + POS + meaning only
    */
-  private async renderEntry(container: Element, entry: WordEntry) {
+  private async renderEntry(container: Element, entry: WordEntry): Promise<Element | null> {
     const entryEl = container.createEl('div', { cls: 'fleurdict-wordbook-entry' });
 
     // Word header
@@ -479,13 +499,18 @@ export class WordbookView extends ItemView {
       cls: 'fleurdict-wordbook-word',
     });
 
-    // Meaning from Youdao (includes POS labels like "noun xx; verb xx")
-    const meaning = await this.getYoudaoMeaning(entry.word);
-    const displayMeaning = meaning || entry.meaning || '';
+    // Meaning — use stored meaning first, Youdao refresh happens later
+    let meaningEl: Element | null = null;
+    const displayMeaning = entry.meaning || '';
     if (displayMeaning) {
-      entryEl.createEl('div', {
+      meaningEl = entryEl.createEl('div', {
         text: displayMeaning,
         cls: 'fleurdict-wordbook-meaning',
+      });
+    } else {
+      meaningEl = entryEl.createEl('div', {
+        text: '加载中…',
+        cls: 'fleurdict-wordbook-meaning fleurdict-wordbook-loading',
       });
     }
 
@@ -519,6 +544,8 @@ export class WordbookView extends ItemView {
     reviewBtn.setAttribute('aria-label', 'AI 详解');
     reviewBtn.addEventListener('click', () => this.aiDetail(entry));
     actionsEl.appendChild(reviewBtn);
+
+    return meaningEl;
   }
 
   /**

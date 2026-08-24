@@ -117,6 +117,19 @@ export class FlashcardEngine {
   }
 
   /**
+   * Rate the current card and update its SM-2 schedule
+   */
+  rateCard(rating: FlashcardRating): void {
+    const card = this.getCurrentCard();
+    if (!card) return;
+
+    const schedule = FlashcardEngine.calculateSchedule(card, rating);
+    card.interval = schedule.interval;
+    card.easeFactor = schedule.easeFactor;
+    card.nextReview = schedule.nextReview;
+  }
+
+  /**
    * Calculate SM-2 schedule for next review
    */
   static calculateSchedule(entry: WordEntry, rating: FlashcardRating): {

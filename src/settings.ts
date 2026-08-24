@@ -12,6 +12,10 @@ import type FleurDictPlugin from './main';
 export class FleurDictSettingTab extends PluginSettingTab {
   plugin: FleurDictPlugin;
 
+  // DOM control refs for AI settings (to sync on provider switch)
+  private aiBaseUrlText: any;
+  private aiModelText: any;
+
   constructor(app: App, plugin: FleurDictPlugin) {
     super(app, plugin);
     this.plugin = plugin;
@@ -64,21 +68,28 @@ export class FleurDictSettingTab extends PluginSettingTab {
           })
       );
 
+    // --- 缓存策略 ---
+    dictSection.createEl('h4', {
+      text: '缓存策略',
+      cls: 'fleurdict-settings-subtitle',
+    });
+
     new Setting(dictSection)
-      .setName('启用缓存')
-      .setDesc('缓存在线词典查询结果，减少重复请求')
+      .setName('启用在线查询缓存')
+      .setDesc('开启后，在线词典的查询结果会缓存在本地，短期内相同单词不再重复请求（推荐开启，可大幅减少网络请求）')
       .addToggle((toggle) => {
         toggle
           .setValue(this.plugin.settings.cacheEnabled)
           .onChange(async (value) => {
             this.plugin.settings.cacheEnabled = value;
             await this.plugin.saveSettings();
+            new Notice(value ? '✓ 已开启在线查询缓存' : '已关闭在线查询缓存，每次查词均实时请求');
           });
       });
 
     new Setting(dictSection)
       .setName('缓存有效期')
-      .setDesc('缓存数据的保留天数')
+      .setDesc('缓存数据的保留天数，过期后自动清除')
       .addSlider((slider) => {
         slider
           .setLimits(1, 30, 1)
@@ -207,7 +218,6 @@ export class FleurDictSettingTab extends PluginSettingTab {
       .addButton((button) => {
         button
           .setButtonText('本地 → 欧路')
-          .setCta()
           .onClick(async () => {
             button.setDisabled(true);
             button.setButtonText('同步中...');
@@ -284,6 +294,7 @@ export class FleurDictSettingTab extends PluginSettingTab {
       .setName('API Base URL')
       .setDesc('AI API 的基础 URL')
       .addText((text) => {
+        this.aiBaseUrlText = text;
         text
           .setPlaceholder('https://api.deepseek.com/v1')
           .setValue(this.plugin.settings.aiBaseUrl)
@@ -310,6 +321,7 @@ export class FleurDictSettingTab extends PluginSettingTab {
       .setName('模型')
       .setDesc('使用的 AI 模型名称')
       .addText((text) => {
+        this.aiModelText = text;
         text
           .setPlaceholder('deepseek-chat')
           .setValue(this.plugin.settings.aiModel)
@@ -324,11 +336,11 @@ export class FleurDictSettingTab extends PluginSettingTab {
       .setDesc('AI 回复的创造性程度（0 = 确定性，1 = 创造性）')
       .addSlider((slider) => {
         slider
-          .setLimits(0, 10, 1)
-          .setValue(Math.round(this.plugin.settings.aiTemperature * 10))
+          .setLimits(0, 1, 0.1)
+          .setValue(this.plugin.settings.aiTemperature)
           .setDynamicTooltip()
           .onChange(async (value) => {
-            this.plugin.settings.aiTemperature = value / 10;
+            this.plugin.settings.aiTemperature = value;
             await this.plugin.saveSettings();
           });
       });
@@ -624,6 +636,59 @@ export class FleurDictSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           });
       });
+
+    // =========================================================================
+    // 数据来源与免责声明（放在最末尾）
+    // =========================================================================
+    const disclaimerContainer = containerEl.createDiv('fleurdict-disclaimer');
+    disclaimerContainer.createEl('h3', {
+      text: '数据来源与免责声明',
+    });
+
+    const disclaimerText = disclaimerContainer.createEl('div', {
+      cls: 'fleurdict-disclaimer-text',
+    });
+
+    disclaimerText.createEl('p', {
+      text: '本插件使用的词典数据来源：',
+    });
+
+    const sourceList = disclaimerText.createEl('ul');
+    sourceList.createEl('li', {
+      text: '有道词典：提供英汉/汉英词典查询服务，数据来源于网易有道词典网页版接口',
+    });
+    sourceList.createEl('li', {
+      text: 'Free Dictionary API：提供英文释义，数据来源于 Wiktionary（CC BY-SA 4.0 许可证）',
+    });
+    sourceList.createEl('li', {
+      text: '欧路词典 API：用于生词本同步，用户需自行提供授权 Token',
+    });
+
+    disclaimerText.createEl('p', {
+      text: '免责声明：',
+      cls: 'fleurdict-disclaimer-warning',
+    });
+
+    const warningList = disclaimerText.createEl('ul', {
+      cls: 'fleurdict-disclaimer-warning-list',
+    });
+    warningList.createEl('li', {
+      text: '本插件仅供个人学习使用，不得用于商业用途',
+    });
+    warningList.createEl('li', {
+      text: '词典数据版权归原作者或机构所有，插件开发者不拥有相关数据权利',
+    });
+    warningList.createEl('li', {
+      text: '如相关数据提供方认为本插件侵犯其权益，请联系开发者处理',
+    });
+    warningList.createEl('li', {
+      text: '使用本插件即表示您同意遵守各数据提供方的服务条款',
+    });
+
+    disclaimerText.createEl('p', {
+      text: '本项目为开源项目，遵循 MIT 许可证。',
+      cls: 'fleurdict-disclaimer-footer',
+    });
   }
 
   /**
@@ -653,6 +718,9 @@ export class FleurDictSettingTab extends PluginSettingTab {
     if (preset) {
       this.plugin.settings.aiBaseUrl = preset.baseUrl;
       this.plugin.settings.aiModel = preset.model;
+      // Sync DOM controls so UI reflects the new values immediately
+      this.aiBaseUrlText?.setValue(preset.baseUrl);
+      this.aiModelText?.setValue(preset.model);
     }
   }
 }

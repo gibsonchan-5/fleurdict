@@ -85,7 +85,7 @@ export const DEFAULT_SETTINGS: FleurDictSettings = {
   aiApiKey: '',
   aiModel: 'deepseek-chat',
   aiTemperature: 0.7,
-  aiMaxTokens: 2048,
+  aiMaxTokens: 8092,
   aiStreaming: true,
 
   // 生词本
