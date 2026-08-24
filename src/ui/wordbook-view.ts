@@ -589,12 +589,81 @@ export class WordbookView extends ItemView {
    * Export wordbook to Markdown
    */
   private async exportWordbook() {
-    const markdown = this.wordbookManager.exportToMarkdown();
-    const fileName = `FleurDict-生词本-${new Date().toISOString().slice(0, 10)}.md`;
-    const file = await this.app.vault.create(fileName, markdown);
-    const leaf = this.app.workspace.getLeaf('tab');
-    await leaf.openFile(file);
-    new Notice(`✓ 生词本已导出到 ${fileName}`);
+    const data = this.wordbookManager.getData();
+    let entries = [...data.words, ...data.phrases];
+
+    // Filter by current context mode (active / custom / all)
+    entries = this.filterByContext(entries);
+
+    if (entries.length === 0) {
+      new Notice('当前范围没有生词可导出');
+      return;
+    }
+
+    const words = entries.filter((e) => e.type === 'word');
+    const phrases = entries.filter((e) => e.type === 'phrase');
+
+    // Build scope label (shortened for filename)
+    let scopeLabel: string;
+    let shortLabel: string;
+    switch (this.contextMode) {
+      case 'active': {
+        const af = this.app.workspace.getActiveFile();
+        scopeLabel = af ? af.basename : '当前笔记';
+        shortLabel = scopeLabel.length > 15 ? scopeLabel.slice(0, 15) + '…' : scopeLabel;
+        break;
+      }
+      case 'custom': {
+        const name = this.contextPath ? this.contextPath.split('/').pop()?.replace('.md', '') || '自定义' : '自定义';
+        scopeLabel = name;
+        shortLabel = name.length > 15 ? name.slice(0, 15) + '…' : name;
+        break;
+      }
+      default:
+        scopeLabel = '全部';
+        shortLabel = '全部';
+    }
+
+    let md = `> 导出时间：${new Date().toLocaleDateString('zh-CN')} | 共 ${words.length} 个单词 / ${phrases.length} 个短语\n\n`;
+
+    if (words.length > 0) {
+      md += `## 单词\n\n`;
+      md += `| 单词 | 音标 | 释义 |\n`;
+      md += `| --- | --- | --- |\n`;
+      for (const w of words) {
+        md += `| ${w.word} | ${w.phonetic || '-'} | ${w.meaning || '-'} |\n`;
+      }
+      md += `\n`;
+    }
+
+    if (phrases.length > 0) {
+      md += `## 短语\n\n`;
+      md += `| 短语 | 释义 |\n`;
+      md += `| --- | --- |\n`;
+      for (const p of phrases) {
+        md += `| ${p.word} | ${p.meaning || '-'} |\n`;
+      }
+      md += `\n`;
+    }
+
+    try {
+      // Ensure FleurDict folder exists
+      const folder = 'FleurDict';
+      if (!this.app.vault.getAbstractFileByPath(folder)) {
+        await this.app.vault.createFolder(folder);
+      }
+
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}-${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
+      const fileName = `${folder}/生词本-${shortLabel}-${dateStr}.md`;
+
+      const file = await this.app.vault.create(fileName, md);
+      const leaf = this.app.workspace.getLeaf('tab');
+      await leaf.openFile(file);
+      new Notice(`✓ 已导出到 ${fileName}`);
+    } catch (e: any) {
+      new Notice(` 导出失败：${e.message}`);
+    }
   }
 
   /**

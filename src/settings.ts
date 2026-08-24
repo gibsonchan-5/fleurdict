@@ -153,19 +153,8 @@ export class FleurDictSettingTab extends PluginSettingTab {
           .onChange(async (value) => {
             this.plugin.settings.eudicLanguage = value as any;
             await this.plugin.saveSettings();
-          });
-      });
-
-    new Setting(eudicSection)
-      .setName('生词本分类')
-      .setDesc('选择欧路词典中的生词本分类（默认 = 我的生词本）')
-      .addText((text) => {
-        text
-          .setPlaceholder('0')
-          .setValue(this.plugin.settings.eudicCategoryId)
-          .onChange(async (value) => {
-            this.plugin.settings.eudicCategoryId = value || '0';
-            await this.plugin.saveSettings();
+            // Reload categories after language change
+            this.display();
           });
       });
 
@@ -372,6 +361,35 @@ export class FleurDictSettingTab extends PluginSettingTab {
           });
       });
 
+    // Test AI connection button
+    new Setting(aiSection)
+      .setName('测试连接')
+      .setDesc('验证 AI API 配置是否有效')
+      .addButton((button) => {
+        button
+          .setButtonText('测试')
+          .onClick(async () => {
+            button.setDisabled(true);
+            button.setButtonText('测试中...');
+            const result = await this.plugin.llmService.testConnection();
+            if (result.success) {
+              button.setButtonText('连接成功 ✓');
+              button.setCta();
+              new Notice(`✓ ${result.message}`);
+            } else {
+              button.setButtonText('连接失败 ✗');
+              button.setWarning();
+              new Notice(`✗ ${result.message}`, 5000);
+            }
+            setTimeout(() => {
+              button.setDisabled(false);
+              button.setButtonText('测试');
+              button.removeCta();
+              button.removeWarning();
+            }, 3000);
+          });
+      });
+
     // =========================================================================
     // Section 4: Wordbook Settings
     // =========================================================================
@@ -435,7 +453,7 @@ export class FleurDictSettingTab extends PluginSettingTab {
       .setDesc(`单词：${stats.totalWords} 个 | 短语：${stats.totalPhrases} 个 | 今日待复习：${stats.dueToday} 个`)
       .addButton((button) => {
         button
-          .setButtonText('导出 Markdown')
+          .setButtonText('导出生词本')
           .onClick(() => {
             this.plugin.app.workspace.trigger('fleurdict:export-wordbook');
           });

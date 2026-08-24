@@ -107,6 +107,10 @@ export default class FleurDictPlugin extends Plugin {
     if (!this.settings.dictionarySource || this.settings.dictionarySource === undefined) {
       this.settings.dictionarySource = 'youdao';
     }
+    // Fix: eudicCategoryId must be "0" (default), remove category selector support
+    if (this.settings.eudicCategoryId && this.settings.eudicCategoryId !== '0') {
+      this.settings.eudicCategoryId = '0';
+    }
     console.log('FleurDict: Loaded settings, dictionarySource =', this.settings.dictionarySource);
   }
 
@@ -213,7 +217,8 @@ export default class FleurDictPlugin extends Plugin {
           new Notice(`✓ "${word}" 已加入生词本并同步到欧路`);
         } catch (e) {
           console.warn('FleurDict: Eudic sync failed for', word, e);
-          new Notice(`✓ "${word}" 已加入本地生词本（欧路同步失败）`);
+          const errMsg = e instanceof Error ? e.message : String(e);
+          new Notice(`✓ "${word}" 已加入本地生词本（欧路同步失败：${errMsg}）`, 6000);
         }
       } else {
         new Notice(`✓ "${word}" 已加入生词本`);
@@ -295,17 +300,55 @@ export default class FleurDictPlugin extends Plugin {
    * Export wordbook to Markdown
    */
   private async exportWordbook() {
-    const markdown = this.wordbookManager.exportToMarkdown();
+    const entries = this.wordbookManager.getAllEntries();
 
-    // Create a new note with the export
-    const fileName = `FleurDict-生词本-${new Date().toISOString().slice(0, 10)}.md`;
-    const file = await this.app.vault.create(fileName, markdown);
+    if (entries.length === 0) {
+      new Notice('生词本是空的');
+      return;
+    }
 
-    // Open the file
-    const leaf = this.app.workspace.getLeaf('tab');
-    await leaf.openFile(file);
+    const words = entries.filter((e) => e.type === 'word');
+    const phrases = entries.filter((e) => e.type === 'phrase');
 
-    new Notice(`✓ 生词本已导出到 ${fileName}`);
+    let md = `> 导出时间：${new Date().toLocaleDateString('zh-CN')} | 共 ${words.length} 个单词 / ${phrases.length} 个短语\n\n`;
+
+    if (words.length > 0) {
+      md += `## 单词\n\n`;
+      md += `| 单词 | 音标 | 释义 |\n`;
+      md += `| --- | --- | --- |\n`;
+      for (const w of words) {
+        md += `| ${w.word} | ${w.phonetic || '-'} | ${w.meaning || '-'} |\n`;
+      }
+      md += `\n`;
+    }
+
+    if (phrases.length > 0) {
+      md += `## 短语\n\n`;
+      md += `| 短语 | 释义 |\n`;
+      md += `| --- | --- |\n`;
+      for (const p of phrases) {
+        md += `| ${p.word} | ${p.meaning || '-'} |\n`;
+      }
+      md += `\n`;
+    }
+
+    try {
+      const folder = 'FleurDict';
+      if (!this.app.vault.getAbstractFileByPath(folder)) {
+        await this.app.vault.createFolder(folder);
+      }
+
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}-${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
+      const fileName = `${folder}/生词本-全部-${dateStr}.md`;
+
+      const file = await this.app.vault.create(fileName, md);
+      const leaf = this.app.workspace.getLeaf('tab');
+      await leaf.openFile(file);
+      new Notice(`✓ 已导出到 ${fileName}`);
+    } catch (e: any) {
+      new Notice(` 导出失败：${e.message}`);
+    }
   }
 
   /**

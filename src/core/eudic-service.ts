@@ -59,8 +59,8 @@ export class EudicService {
     };
 
     try {
-      const resp = await requestUrl({
-        url,
+      // Use fetch instead of requestUrl to get full error body on 4xx responses
+      const resp = await fetch(url, {
         method,
         headers,
         body: body ? JSON.stringify(body) : undefined,
@@ -71,8 +71,23 @@ export class EudicService {
         return { message: 'success' } as EudicApiResponse<T>;
       }
 
-      return resp.json as EudicApiResponse<T>;
+      // Read response body regardless of status
+      const text = await resp.text();
+      let parsed: any;
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        parsed = text;
+      }
+
+      if (!resp.ok) {
+        const errMsg = parsed?.message || parsed?.msg || text || `HTTP ${resp.status}`;
+        throw new Error(`欧路 API 错误 (${resp.status}): ${errMsg}`);
+      }
+
+      return parsed as EudicApiResponse<T>;
     } catch (err: any) {
+      if (err.message?.includes('欧路 API 错误')) throw err;
       const status = err?.status || err?.response?.status || 'unknown';
       const detail = err?.message || JSON.stringify(err);
       console.error('[FleurDict-DIAG] Eudic API request failed:', detail);
@@ -170,7 +185,7 @@ export class EudicService {
   async addWord(word: string, context?: string, star: number = 2): Promise<void> {
     try {
       await this.request('/studylist/words', 'POST', {
-        category_id: this.settings.eudicCategoryId,
+        category_id: this.settings.eudicCategoryId || '0',
         language: this.settings.eudicLanguage,
         words: [word],
       });
@@ -189,13 +204,11 @@ export class EudicService {
 
     try {
       const body = {
-        category_id: this.settings.eudicCategoryId,
+        category_id: this.settings.eudicCategoryId || '0',
         language: this.settings.eudicLanguage,
         words,
       };
-      console.log('[FleurDict-DIAG] addWords sending:', JSON.stringify(body));
       const result = await this.request('/studylist/words', 'POST', body);
-      console.log(`[FleurDict-DIAG] addWords result:`, JSON.stringify(result));
       console.log(`FleurDict: Added ${words.length} words to Eudic`);
     } catch (error) {
       console.error('FleurDict: Failed to batch add words to Eudic:', error);
@@ -209,7 +222,7 @@ export class EudicService {
   async deleteWord(word: string): Promise<void> {
     try {
       await this.request('/studylist/words', 'DELETE', {
-        category_id: this.settings.eudicCategoryId,
+        category_id: this.settings.eudicCategoryId || '0',
         language: this.settings.eudicLanguage,
         words: [word],
       });

@@ -492,6 +492,7 @@
   justify-content: flex-end;
   gap: 8px;
   flex-wrap: wrap;
+  min-height: 32px;
 }
 
 /* Inputs & dropdowns — natural width, always left-aligned text */
@@ -537,14 +538,16 @@
 .fleurdict-settings .checkbox-container {
   position: relative;
   display: inline-block;
-  width: 38px;
-  height: 22px;
-  border-radius: 11px;
+  width: 40px !important;
+  height: 24px !important;
+  border-radius: 12px !important;
   background: var(--fleurdict-border-subtle);
   border: none;
   cursor: pointer;
   transition: background 0.15s var(--fleurdict-ease);
   box-sizing: border-box;
+  transform: none !important;
+  zoom: normal !important;
 }
 
 .fleurdict-settings .checkbox-container.is-enabled {
@@ -556,14 +559,17 @@
 .fleurdict-settings .checkbox-container > * {
   width: 16px !important;
   height: 16px !important;
-  top: 3px !important;
-  left: 3px !important;
+  top: 4px !important;
+  left: 4px !important;
   right: auto !important;
   bottom: auto !important;
+  transform: none !important;
+  zoom: normal !important;
   box-sizing: border-box;
 }
 
 /* Sliders */
+/* Slider — keep the value label compact, slider centered in its container */
 .fleurdict-settings input[type='range'] {
   -webkit-appearance: none;
   width: 140px;
@@ -571,6 +577,7 @@
   border-radius: 2px;
   background: var(--fleurdict-border-subtle);
   outline: none;
+  margin: 0 6px;
 }
 
 .fleurdict-settings input[type='range']::-webkit-slider-thumb {

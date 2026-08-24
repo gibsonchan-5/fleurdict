@@ -296,48 +296,39 @@ export class WordbookManager {
       ? this.data.categories.find((c) => c.id === categoryId)
       : null;
 
-    let markdown = `# FleurDict ${category?.name || '生词本'}\n\n`;
-    markdown += `> 导出时间：${new Date().toLocaleDateString('zh-CN')}\n`;
-    markdown += `> 共 ${this.data.words.filter((w) => !categoryId || w.category === categoryId).length} 个单词 / ${this.data.phrases.filter((p) => !categoryId || p.category === categoryId).length} 个短语\n\n`;
+    const wordCount = this.data.words.filter((w) => !categoryId || w.category === categoryId).length;
+    const phraseCount = this.data.phrases.filter((p) => !categoryId || p.category === categoryId).length;
 
-    // Words section
+    let markdown = `# FleurDict ${category?.name || '生词本'}\n\n`;
+    markdown += `> 导出时间：${new Date().toLocaleDateString('zh-CN')} | 共 ${wordCount} 个单词 / ${phraseCount} 个短语\n\n`;
+
+    // Words table
     const words = entries.filter((e) => e.type === 'word');
     if (words.length > 0) {
       markdown += `## 单词\n\n`;
+      markdown += `| 单词 | 音标 | 释义 | 例句 |\n`;
+      markdown += `| --- | --- | --- | --- |\n`;
       for (const word of words) {
-        markdown += `### ${word.word} ${word.phonetic}\n`;
-        markdown += `- **释义**：${word.meaning}\n`;
-        if (word.context) {
-          markdown += `- **例句**：${word.context}\n`;
-        }
-        if (word.note) {
-          markdown += `- **笔记**：${word.note}\n`;
-        }
-        if (word.source) {
-          markdown += `- **来源**：[[${word.source}]]\n`;
-        }
-        markdown += `\n`;
+        const phonetic = word.phonetic || '-';
+        const meaning = word.meaning || '-';
+        const context = word.context || '-';
+        markdown += `| ${word.word} | ${phonetic} | ${meaning} | ${context} |\n`;
       }
+      markdown += `\n`;
     }
 
-    // Phrases section
+    // Phrases table
     const phrases = entries.filter((e) => e.type === 'phrase');
     if (phrases.length > 0) {
       markdown += `## 短语搭配\n\n`;
+      markdown += `| 短语 | 释义 | 例句 |\n`;
+      markdown += `| --- | --- | --- |\n`;
       for (const phrase of phrases) {
-        markdown += `### ${phrase.word}\n`;
-        markdown += `- **释义**：${phrase.meaning}\n`;
-        if (phrase.context) {
-          markdown += `- **例句**：${phrase.context}\n`;
-        }
-        if (phrase.note) {
-          markdown += `- **笔记**：${phrase.note}\n`;
-        }
-        if (phrase.source) {
-          markdown += `- **来源**：[[${phrase.source}]]\n`;
-        }
-        markdown += `\n`;
+        const meaning = phrase.meaning || '-';
+        const context = phrase.context || '-';
+        markdown += `| ${phrase.word} | ${meaning} | ${context} |\n`;
       }
+      markdown += `\n`;
     }
 
     return markdown;
