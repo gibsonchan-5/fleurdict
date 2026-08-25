@@ -198,10 +198,11 @@ export class FlashcardModal extends Modal {
 
       const buttonsEl = ratingEl.createEl('div', { cls: 'fleurdict-flashcard-rating-buttons' });
 
-      // Rating buttons: 忘了 / 记得 / 跳过
+      // Rating buttons: 陌生 / 渐熟 / 熟悉 / 跳过
       const ratings: { label: string; rating: FlashcardRating | null; cls: string }[] = [
-        { label: '忘了', rating: 1, cls: 'fleurdict-rating-again' },
-        { label: '记得', rating: 4, cls: 'fleurdict-rating-good' },
+        { label: '陌生', rating: 1, cls: 'fleurdict-rating-again' },
+        { label: '渐熟', rating: 2, cls: 'fleurdict-rating-learning' },
+        { label: '熟悉', rating: 3, cls: 'fleurdict-rating-known' },
         { label: '跳过', rating: null, cls: 'fleurdict-rating-skip' },
       ];
 

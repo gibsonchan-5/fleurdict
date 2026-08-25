@@ -38,6 +38,13 @@ export class WordbookManager {
       const wordsData = await this.plugin.loadData();
       if (wordsData?.wordbook) {
         this.data = wordsData.wordbook;
+        // 为旧数据添加分级字段默认值
+        const migrate = (entry: WordEntry) => {
+          if (entry.proficiency === undefined) entry.proficiency = 0;
+          if (entry.consecutiveCorrect === undefined) entry.consecutiveCorrect = 0;
+        };
+        this.data.words.forEach(migrate);
+        this.data.phrases.forEach(migrate);
       }
     } catch (error) {
       console.error('FleurDict: Failed to load wordbook:', error);
@@ -109,6 +116,8 @@ export class WordbookManager {
       nextReview: now(),
       easeFactor: this.settings.initialEaseFactor,
       interval: 0,
+      proficiency: 0, // 陌生（红色）
+      consecutiveCorrect: 0,
     };
 
     if (type === 'word') {

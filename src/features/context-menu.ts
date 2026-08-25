@@ -79,8 +79,19 @@ export class ContextMenuManager {
       return;
     }
 
+    // Check if reading mode is enabled
+    const isReadingMode = this.settings.readingModeEnabled;
+
+    if (isReadingMode) {
+      // Reading mode: clear all default menu items and show only FleurDict items
+      menu.clear();
+    }
+
     console.log('FleurDict: Adding menu items for:', cleanWord, '| full selection:', fullSelection);
-    menu.addSeparator();
+    
+    if (!isReadingMode) {
+      menu.addSeparator();
+    }
 
     // Lookup word — uses extracted single word/phrase
     menu.addItem((item: MenuItem) => {
@@ -125,7 +136,9 @@ export class ContextMenuManager {
         });
     });
 
-    menu.addSeparator();
+    if (!isReadingMode) {
+      menu.addSeparator();
+    }
   }
 
   /**

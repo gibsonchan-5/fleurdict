@@ -921,22 +921,16 @@
   background: rgba(225, 29, 72, 0.06);
 }
 
-.fleurdict-rating-hard:hover {
+.fleurdict-rating-learning:hover {
   border-color: #d97706;
   color: #d97706;
   background: rgba(217, 119, 6, 0.06);
 }
 
-.fleurdict-rating-good:hover {
-  border-color: var(--fleurdict-primary);
-  color: var(--fleurdict-primary);
-  background: var(--fleurdict-primary-subtle);
-}
-
-.fleurdict-rating-easy:hover {
-  border-color: var(--fleurdict-accent);
-  color: var(--fleurdict-accent);
-  background: var(--fleurdict-accent-subtle);
+.fleurdict-rating-known:hover {
+  border-color: #16a34a;
+  color: #16a34a;
+  background: rgba(22, 163, 74, 0.06);
 }
 
 .fleurdict-rating-skip:hover {
@@ -1809,8 +1803,12 @@
   background: rgba(225, 29, 72, 0.12);
 }
 
-.theme-dark .fleurdict-rating-hard:hover {
+.theme-dark .fleurdict-rating-learning:hover {
   background: rgba(217, 119, 6, 0.12);
+}
+
+.theme-dark .fleurdict-rating-known:hover {
+  background: rgba(22, 163, 74, 0.12);
 }
 
 /* ============================================================================
@@ -2288,6 +2286,40 @@
 .fleurdict-disclaimer-warning-list li {
   margin-bottom: 4px;
   line-height: 1.5;
+}
+
+/* ============================================================================
+   Word Highlighting (单词高亮)
+   ============================================================================ */
+
+.fleurdict-highlight-red {
+  background-color: rgba(255, 107, 107, 0.3);
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
+.fleurdict-highlight-yellow {
+  background-color: rgba(255, 217, 61, 0.3);
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
+.fleurdict-highlight-green {
+  background-color: rgba(105, 240, 174, 0.3);
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
+.theme-dark .fleurdict-highlight-red {
+  background-color: rgba(255, 107, 107, 0.25);
+}
+
+.theme-dark .fleurdict-highlight-yellow {
+  background-color: rgba(255, 217, 61, 0.25);
+}
+
+.theme-dark .fleurdict-highlight-green {
+  background-color: rgba(105, 240, 174, 0.25);
 }
 
 .fleurdict-disclaimer-footer {

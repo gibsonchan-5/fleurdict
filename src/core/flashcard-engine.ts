@@ -117,53 +117,65 @@ export class FlashcardEngine {
   }
 
   /**
-   * Rate the current card and update its SM-2 schedule
+   * Rate the current card and update its proficiency level
    */
   rateCard(rating: FlashcardRating): void {
     const card = this.getCurrentCard();
     if (!card) return;
 
-    const schedule = FlashcardEngine.calculateSchedule(card, rating);
-    card.interval = schedule.interval;
-    card.easeFactor = schedule.easeFactor;
-    card.nextReview = schedule.nextReview;
-  }
+    // Update review timestamp and count
+    card.lastReviewed = now();
+    card.reviewCount++;
 
-  /**
-   * Calculate SM-2 schedule for next review
-   */
-  static calculateSchedule(entry: WordEntry, rating: FlashcardRating): {
-    interval: number;
-    easeFactor: number;
-    nextReview: number;
-  } {
-    let interval = entry.interval;
-    let easeFactor = entry.easeFactor;
-
-    if (rating < 3) {
-      // Failed - reset
-      interval = 1;
-      easeFactor = Math.max(1.3, easeFactor - 0.2);
-    } else {
-      // Passed
-      if (interval === 0) {
-        interval = 1;
-      } else if (interval === 1) {
-        interval = 6;
+    // Apply proficiency-based algorithm
+    if (rating === 1) {
+      // 陌生 (forgot): Reset proficiency to 0, reset consecutive correct
+      card.proficiency = 0;
+      card.consecutiveCorrect = 0;
+      card.easeFactor = Math.max(1.3, card.easeFactor - 0.2);
+    } else if (rating === 2) {
+      // 渐熟 (learning): Increment consecutive correct
+      card.consecutiveCorrect++;
+      
+      // Check if ready to upgrade to proficiency 1
+      if (card.consecutiveCorrect >= 2) {
+        card.proficiency = 1;
+        card.consecutiveCorrect = 0;
+        card.easeFactor = Math.min(3.0, card.easeFactor + 0.1);
       } else {
-        interval = Math.round(interval * easeFactor);
+        // Stay at proficiency 0, slight ease factor increase
+        card.easeFactor = Math.min(3.0, card.easeFactor + 0.05);
       }
-
-      if (rating === 5) {
-        easeFactor += 0.1;
-      } else if (rating === 3) {
-        easeFactor = Math.max(1.3, easeFactor - 0.1);
+    } else if (rating === 3) {
+      // 熟悉 (known): Increment consecutive correct
+      card.consecutiveCorrect++;
+      
+      // Check if ready to upgrade to proficiency 2
+      if (card.proficiency === 0 && card.consecutiveCorrect >= 2) {
+        card.proficiency = 2;
+        card.consecutiveCorrect = 0;
+        card.easeFactor = Math.min(3.0, card.easeFactor + 0.2);
+      } else if (card.proficiency === 1 && card.consecutiveCorrect >= 3) {
+        card.proficiency = 2;
+        card.consecutiveCorrect = 0;
+        card.easeFactor = Math.min(3.0, card.easeFactor + 0.15);
+      } else {
+        // Stay at current proficiency, moderate ease factor increase
+        card.easeFactor = Math.min(3.0, card.easeFactor + 0.1);
       }
     }
 
-    const nextReview = now() + interval * 24 * 60 * 60 * 1000;
+    // Calculate interval based on proficiency level
+    if (card.proficiency === 0) {
+      card.interval = 1; // 1 day
+    } else if (card.proficiency === 1) {
+      card.interval = 3; // 3 days
+    } else if (card.proficiency === 2) {
+      card.interval = 7; // 7 days
+    }
 
-    return { interval, easeFactor, nextReview };
+    // Calculate next review time
+    card.nextReview = now() + card.interval * 24 * 60 * 60 * 1000;
   }
 
   /**
