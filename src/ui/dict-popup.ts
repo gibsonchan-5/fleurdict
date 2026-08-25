@@ -384,42 +384,45 @@ export class DictPopup {
 
     // Bottom: phonetics — each on its own line, aligned with word
     const firstEntry = results[0]?.entries[0];
-    if (firstEntry && this.settings.showPhonetic && firstEntry.phonetics.length > 0) {
+    const validPhonetics = (firstEntry?.phonetics ?? []).filter((p) => {
+      if (!p.text) return false;
+      const ipa = p.text.replace(/^[英美]\s*/, '').trim();
+      return ipa.length > 0;
+    });
+    if (firstEntry && this.settings.showPhonetic && validPhonetics.length > 0) {
       header.addClass('has-phonetics');
       const phoneticsContainer = document.createElement('div');
       phoneticsContainer.addClass('fleurdict-phonetics-col');
 
-      for (const phonetic of firstEntry.phonetics) {
+      for (const phonetic of validPhonetics) {
         const phoneticItem = document.createElement('div');
         phoneticItem.addClass('fleurdict-phonetic-item');
 
-        if (phonetic.text) {
-          // Label: 英 or 美
-          const label = document.createElement('span');
-          label.addClass('fleurdict-phonetic-badge');
-          label.textContent = phonetic.text.startsWith('英') ? '英' : '美';
-          phoneticItem.appendChild(label);
+        // Label: 英 or 美
+        const label = document.createElement('span');
+        label.addClass('fleurdict-phonetic-badge');
+        label.textContent = phonetic.text.startsWith('英') ? '英' : '美';
+        phoneticItem.appendChild(label);
 
-          // IPA text
-          const ipaText = phonetic.text.replace(/^[英美]\s*/, '');
-          const ipa = document.createElement('span');
-          ipa.addClass('fleurdict-phonetic-ipa');
-          ipa.textContent = ipaText;
-          phoneticItem.appendChild(ipa);
+        // IPA text
+        const ipaText = phonetic.text.replace(/^[英美]\s*/, '');
+        const ipa = document.createElement('span');
+        ipa.addClass('fleurdict-phonetic-ipa');
+        ipa.textContent = ipaText;
+        phoneticItem.appendChild(ipa);
 
-          if (this.settings.showAudioButton && phonetic.audio) {
-            // Speaker icon
-            const iconBtn = document.createElement('span');
-            iconBtn.addClass('fleurdict-play-icon');
-            iconBtn.setAttribute('role', 'button');
-            iconBtn.setAttribute('aria-label', phonetic.text.startsWith('英') ? '英式发音' : '美式发音');
-            iconBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>';
-            iconBtn.addEventListener('click', (e) => {
-              e.stopPropagation();
-              this.playAudio(word, phonetic.audio);
-            });
-            phoneticItem.appendChild(iconBtn);
-          }
+        if (this.settings.showAudioButton && phonetic.audio) {
+          // Speaker icon
+          const iconBtn = document.createElement('span');
+          iconBtn.addClass('fleurdict-play-icon');
+          iconBtn.setAttribute('role', 'button');
+          iconBtn.setAttribute('aria-label', phonetic.text.startsWith('英') ? '英式发音' : '美式发音');
+          iconBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>';
+          iconBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.playAudio(word, phonetic.audio);
+          });
+          phoneticItem.appendChild(iconBtn);
         }
 
         phoneticsContainer.appendChild(phoneticItem);

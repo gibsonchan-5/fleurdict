@@ -17,10 +17,15 @@ export class AIModal extends Modal {
   private llmService: LLMService;
   private messages: ChatMessage[];
   private title: string;
+  private originalText?: string;
   private plugin?: Plugin;
 
   private contentEl: HTMLElement;
+  private renderAreaEl: HTMLElement;
   private streamAbortController: AbortController | null = null;
+  private fullContent = '';
+  private copyButton?: HTMLButtonElement;
+  private saveButton?: HTMLButtonElement;
 
   // Drag & resize state
   private isDragging = false;
@@ -46,6 +51,7 @@ export class AIModal extends Modal {
     llmService: LLMService,
     messages: ChatMessage[],
     title: string,
+    originalText?: string,
     plugin?: Plugin
   ) {
     super(app);
@@ -53,6 +59,7 @@ export class AIModal extends Modal {
     this.llmService = llmService;
     this.messages = messages;
     this.title = title;
+    this.originalText = originalText;
     this.plugin = plugin;
   }
 
@@ -118,6 +125,8 @@ export class AIModal extends Modal {
     this.contentEl.style.borderRadius = '8px';
     this.contentEl.style.lineHeight = '1.6';
     this.contentEl.style.fontSize = '14px';
+    this.contentEl.style.display = 'flex';
+    this.contentEl.style.flexDirection = 'column';
 
     // Make the modal body a flex column
     modalEl.style.display = 'flex';
@@ -145,8 +154,36 @@ export class AIModal extends Modal {
     resizeHandle.addEventListener('mouseenter', () => { resizeHandle.style.opacity = '0.8'; });
     resizeHandle.addEventListener('mouseleave', () => { resizeHandle.style.opacity = '0.4'; });
 
+    // Show original text if provided (direct child of contentEl, above render area)
+    if (this.originalText) {
+      const originalEl = this.contentEl.createDiv('fleurdict-ai-original-text');
+      originalEl.style.cssText = `
+        padding: 10px 14px;
+        margin-bottom: 10px;
+        background: var(--background-primary);
+        border-left: 3px solid var(--interactive-accent, teal);
+        border-radius: 6px;
+        font-style: italic;
+        color: var(--text-muted);
+        font-size: 13px;
+        line-height: 1.6;
+        flex-shrink: 0;
+      `;
+      const label = originalEl.createSpan();
+      label.textContent = '原文：';
+      label.style.cssText = 'font-weight: 600; color: var(--text-secondary); font-style: normal;';
+      const textSpan = originalEl.createSpan();
+      textSpan.textContent = this.originalText;
+    }
+
+    // Dedicated render area for AI streaming output (innerHTML replaces safely here)
+    this.renderAreaEl = this.contentEl.createDiv('fleurdict-ai-render-area');
+    this.renderAreaEl.style.flex = '1';
+    this.renderAreaEl.style.minHeight = '0';
+    this.renderAreaEl.style.overflow = 'auto';
+
     // Loading indicator
-    const loadingEl = this.contentEl.createDiv('fleurdict-ai-loading');
+    const loadingEl = this.renderAreaEl.createDiv('fleurdict-ai-loading');
     loadingEl.setText('AI 正在思考...');
     loadingEl.style.color = 'var(--text-muted)';
     loadingEl.style.fontStyle = 'italic';
@@ -160,13 +197,20 @@ export class AIModal extends Modal {
     buttonContainer.style.flexShrink = '0';
 
     // Copy button
-    const copyButton = buttonContainer.createEl('button', { text: '复制' });
-    copyButton.addClass('mod-cta');
-    copyButton.disabled = true;
-    copyButton.onclick = () => this.copyContent();
+    this.copyButton = buttonContainer.createEl('button', { text: '复制' });
+    this.copyButton.addClass('fleurdict-ai-btn');
+    this.copyButton.disabled = true;
+    this.copyButton.onclick = () => this.copyContent();
+
+    // Save to note button
+    this.saveButton = buttonContainer.createEl('button', { text: '写入笔记' });
+    this.saveButton.addClass('fleurdict-ai-btn');
+    this.saveButton.disabled = true;
+    this.saveButton.onclick = () => this.saveToNote();
 
     // Close button
     const closeButton = buttonContainer.createEl('button', { text: '关闭' });
+    closeButton.addClass('fleurdict-ai-btn');
     closeButton.onclick = () => this.close();
 
     // === Drag to move (title bar) ===
@@ -231,13 +275,13 @@ export class AIModal extends Modal {
         modalEl.style.cursor = '';
         titleBar.style.cursor = 'grab';
         document.body.style.userSelect = '';
-        // Persist final position
-        this.saveGeometry();
+        // Persist final position (fire-and-forget is fine here)
+        this.saveGeometry().catch(() => {});
       }
       if (this.isResizing) {
         this.isResizing = false;
         // Persist geometry
-        this.saveGeometry();
+        this.saveGeometry().catch(() => {});
       }
     };
 
@@ -245,7 +289,7 @@ export class AIModal extends Modal {
     document.addEventListener('mouseup', onGlobalMouseUp);
 
     // Start streaming
-    await this.startStreaming(loadingEl, copyButton);
+    await this.startStreaming(loadingEl, this.copyButton, this.saveButton);
   }
 
   /**
@@ -263,7 +307,7 @@ export class AIModal extends Modal {
   /**
    * Save current geometry to plugin data
    */
-  private saveGeometry() {
+  private async saveGeometry() {
     if (!this.plugin) return;
     const modalEl = this.modalEl;
     if (!modalEl) return;
@@ -278,18 +322,19 @@ export class AIModal extends Modal {
     geom.w = Math.max(380, Math.min(geom.w, window.innerWidth - 40));
     geom.h = Math.max(260, Math.min(geom.h, window.innerHeight - 40));
     try {
-      const pluginAny = this.plugin as any;
-      if (!pluginAny.settings) pluginAny.settings = {};
-      pluginAny.settings._aiModalGeometry = geom;
-      pluginAny.saveData(Object.assign({}, pluginAny.settings));
+      // Must merge with existing data.json, otherwise wordbook data would be overwritten.
+      const data = (await this.plugin.loadData()) || {};
+      if (!data.settings) data.settings = {};
+      data.settings._aiModalGeometry = geom;
+      await this.plugin.saveData(data);
     } catch { /* ignore save errors */ }
   }
 
   /**
    * Start streaming AI response
    */
-  private async startStreaming(loadingEl: HTMLElement, copyButton: HTMLButtonElement) {
-    let fullContent = '';
+  private async startStreaming(loadingEl: HTMLElement, copyButton?: HTMLButtonElement, saveButton?: HTMLButtonElement) {
+    this.fullContent = '';
 
     this.streamAbortController = await this.llmService.sendMessageStream(
       this.messages,
@@ -300,13 +345,15 @@ export class AIModal extends Modal {
         }
 
         if (chunk.content) {
-          fullContent += chunk.content;
-          this.renderContent(fullContent);
+          this.fullContent += chunk.content;
+          this.renderContent(this.fullContent);
         }
       },
       () => {
         // Streaming complete
-        copyButton.disabled = !fullContent;
+        const hasContent = !!this.fullContent;
+        if (copyButton) copyButton.disabled = !hasContent;
+        if (saveButton) saveButton.disabled = !hasContent;
       },
       (error) => {
         // Error occurred
@@ -433,7 +480,7 @@ export class AIModal extends Modal {
 
     if (inList) { htmlLines.push('</ul>'); }
     if (inTable) { htmlLines.push('</tbody></table>'); }
-    this.contentEl.innerHTML = htmlLines.join('');
+    this.renderAreaEl.innerHTML = htmlLines.join('');
   }
 
   /**
@@ -461,9 +508,9 @@ export class AIModal extends Modal {
       await navigator.clipboard.writeText(text);
 
       // Show feedback
-      const originalText = this.contentEl.parentElement?.querySelector('button')?.textContent;
-      const copyButton = this.contentEl.parentElement?.querySelector('button');
+      const copyButton = this.copyButton;
       if (copyButton) {
+        const originalText = copyButton.textContent;
         copyButton.textContent = '已复制！';
         setTimeout(() => {
           if (copyButton) copyButton.textContent = originalText || '复制';
@@ -471,6 +518,61 @@ export class AIModal extends Modal {
       }
     } catch (error) {
       console.error('FleurDict: Failed to copy:', error);
+    }
+  }
+
+  /**
+   * Save AI response to a note in FleurDict folder
+   */
+  private async saveToNote() {
+    const app = this.app;
+    const vault = app.vault;
+
+    // Build markdown content
+    const lines: string[] = [];
+    lines.push(`# ${this.title}`);
+    lines.push('');
+    if (this.originalText) {
+      lines.push(`> ${this.originalText}`);
+      lines.push('');
+    }
+    lines.push('---');
+    lines.push('');
+    // Use the streamed content
+    if (this.fullContent) {
+      lines.push(this.fullContent);
+    } else {
+      // Fallback: use rendered text
+      lines.push(this.renderAreaEl?.innerText || this.contentEl?.innerText || '');
+    }
+    lines.push('');
+
+    const md = lines.join('\n');
+
+    try {
+      // Ensure FleurDict folder exists
+      const folder = 'FleurDict';
+      if (!vault.getAbstractFileByPath(folder)) {
+        await vault.createFolder(folder);
+      }
+
+      // Generate filename: use first few words of original text or title
+      const safeTitle = (this.originalText || this.title)
+        .replace(/[^a-zA-Z0-9\u4e00-\u9fff\s-]/g, '')
+        .replace(/\s+/g, '_')
+        .substring(0, 50)
+        .trim() || 'ai-response';
+
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}-${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
+      const fileName = `${folder}/${safeTitle}-${dateStr}.md`;
+
+      const file = await vault.create(fileName, md);
+      const leaf = app.workspace.getLeaf('tab');
+      await leaf.openFile(file);
+      new Notice(`✓ 已写入笔记：${fileName}`);
+    } catch (e: any) {
+      new Notice(`写入笔记失败：${e.message}`);
     }
   }
 
@@ -500,7 +602,7 @@ export async function showAITranslation(
   const { buildAITranslatePrompt } = await import('../core/llm-service');
   const messages = buildAITranslatePrompt(text, context);
 
-  const modal = new AIModal(app, settings, llmService, messages, 'AI 翻译', plugin);
+  const modal = new AIModal(app, settings, llmService, messages, 'AI 翻译', text, plugin);
   modal.open();
 }
 
@@ -518,6 +620,6 @@ export async function showAIDetail(
   const { buildAIDetailPrompt } = await import('../core/llm-service');
   const messages = buildAIDetailPrompt(word, context);
 
-  const modal = new AIModal(app, settings, llmService, messages, `AI 详解：${word}`, plugin);
+  const modal = new AIModal(app, settings, llmService, messages, 'AI 详解', word, plugin);
   modal.open();
 }
