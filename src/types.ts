@@ -62,9 +62,13 @@ export interface FleurDictSettings {
   // 生词本上下文模式（参考 FleurPilot）
   contextMode: 'active' | 'all' | 'custom' | 'none';
   contextPath: string; // 自定义选择的单个文件夹或笔记路径
+  contextPaths?: string[]; // 旧版多选路径（保留兼容，当前逻辑主要用 contextPath）
 
   // 阅读模式
   readingModeEnabled: boolean;
+
+  // 生词高亮
+  highlightEnabled: boolean;
 }
 
 export const DEFAULT_SETTINGS: FleurDictSettings = {
@@ -124,6 +128,9 @@ export const DEFAULT_SETTINGS: FleurDictSettings = {
 
   // 阅读模式
   readingModeEnabled: false,
+
+  // 生词高亮
+  highlightEnabled: true,
 };
 
 /**

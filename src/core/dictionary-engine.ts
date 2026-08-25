@@ -40,55 +40,45 @@ export class DictionaryEngine {
    */
   async query(word: string): Promise<DictionaryResult[]> {
     const normalizedWord = normalizeWord(word);
-    console.log('[FleurDict-DIAG] Engine.query called for:', normalizedWord);
-    console.log('[FleurDict-DIAG] Settings dictionarySource:', this.settings.dictionarySource);
-    console.log('[FleurDict-DIAG] Settings cacheEnabled:', this.settings.cacheEnabled);
 
     // Check cache first
     if (this.settings.cacheEnabled) {
       const cached = this.getCached(normalizedWord);
       if (cached) {
-        console.log('[FleurDict-DIAG] Cache hit for:', normalizedWord);
         return [cached];
       }
     }
 
     const source = this.settings.dictionarySource || 'youdao';
-    console.log('[FleurDict-DIAG] Effective source:', source);
 
     // Source: 'youdao' (default)
     if (source === 'youdao' || source === 'both') {
       try {
-        console.log('[FleurDict-DIAG] Trying Youdao...');
         const entries = await this.youdaoAPI.query(normalizedWord);
-        console.log('[FleurDict-DIAG] Youdao returned', entries.length, 'entries');
         if (entries.length > 0) {
           const result: DictionaryResult = { source: 'youdao', entries };
           if (this.settings.cacheEnabled) this.setCache(normalizedWord, result);
           return [result];
         }
       } catch (error) {
-        console.error('[FleurDict-DIAG] Youdao query failed:', error);
+        console.error('FleurDict: Youdao query failed:', error);
       }
     }
 
     // Source: 'free-dict' or 'both' (no fallback when source is explicitly 'youdao')
     if (source === 'free-dict' || source === 'both') {
       try {
-        console.log('[FleurDict-DIAG] Trying FreeDict as fallback...');
         const entries = await this.freeDictAPI.query(normalizedWord);
-        console.log('[FleurDict-DIAG] FreeDict returned', entries.length, 'entries');
         if (entries.length > 0) {
           const result: DictionaryResult = { source: 'free-dict', entries };
           if (this.settings.cacheEnabled) this.setCache(normalizedWord, result);
           return [result];
         }
       } catch (error) {
-        console.error('[FleurDict-DIAG] FreeDict query failed:', error);
+        console.error('FleurDict: FreeDict query failed:', error);
       }
     }
 
-    console.log('[FleurDict-DIAG] All sources failed, returning error');
     return [{ source: 'error', entries: [], error: '查询失败' }];
   }
 

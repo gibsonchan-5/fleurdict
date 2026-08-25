@@ -108,9 +108,7 @@
   -webkit-user-select: none;
 }
 
-.fleurdict-popup-header.has-phonetics {
-  border-bottom: 1px solid var(--fleurdict-border-subtle);
-}
+/* No separator line under phonetics — body padding alone provides visual gap */
 
 .fleurdict-header-top {
   display: flex;
@@ -1159,6 +1157,50 @@
   background: var(--fleurdict-bg-elevated);
 }
 
+.fleurdict-ai-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+  flex-shrink: 0;
+}
+
+.fleurdict-ai-buttons button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0 18px;
+  border-radius: 8px;
+  border: 1px solid var(--fleurdict-border-subtle);
+  background: var(--fleurdict-bg-elevated);
+  color: var(--fleurdict-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: all 0.15s var(--fleurdict-ease);
+  white-space: nowrap;
+}
+
+.fleurdict-ai-buttons button:hover:not(:disabled) {
+  background: var(--fleurdict-bg);
+  border-color: var(--fleurdict-primary-border);
+  color: var(--fleurdict-primary);
+  transform: translateY(-1px);
+  box-shadow: var(--fleurdict-shadow-sm);
+}
+
+.fleurdict-ai-buttons button:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+  box-shadow: none;
+}
+
+.fleurdict-ai-buttons button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .fleurdict-ai-loading {
   display: flex;
   flex-direction: column;
@@ -1225,6 +1267,7 @@
 .fleurdict-wordbook-actions {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
 }
 
@@ -1298,7 +1341,8 @@
   min-width: 0;
   box-sizing: border-box;
   padding: 0 32px 0 26px;
-  height: 32px;
+  min-height: 36px;
+  height: auto;
   border: 1px solid var(--fleurdict-border-subtle);
   border-radius: var(--fleurdict-radius);
   background: var(--fleurdict-bg-elevated);
@@ -1755,8 +1799,6 @@
 .fleurdict-edit-modal-actions button.mod-cta:hover {
   background: var(--fleurdict-primary);
   color: white;
-}
-
 }
 
 .fleurdict-wordbook-empty {
@@ -2327,5 +2369,139 @@
   font-size: 11px;
   color: var(--text-faint);
   font-style: italic;
+}
+
+/* ============================================================================
+   Reading Mode - Warm Paper Background & Immersive Style
+   Uses maximum specificity to override any theme
+   ============================================================================ */
+
+/* === Light theme: warm paper === */
+
+/* 只在 Markdown 预览视图内部覆盖 CSS 变量，不影响侧边栏 */
+body.fleurdict-reading-mode:not(.theme-dark) .workspace-leaf-content[data-type="markdown"] {
+  --background-primary: #fdf6e3 !important;
+  --background-primary-alt: #fdf6e3 !important;
+}
+
+body.fleurdict-reading-mode:not(.theme-dark) .workspace-leaf-content[data-type="markdown"] .markdown-preview-view,
+body.fleurdict-reading-mode:not(.theme-dark) .workspace-leaf-content[data-type="markdown"] .markdown-reading-view {
+  background-color: #fdf6e3 !important;
+  color: #586e75 !important;
+  --background-primary: #fdf6e3 !important;
+  --background-primary-alt: #fdf6e3 !important;
+}
+
+/* The preview view - main background */
+body.fleurdict-reading-mode:not(.theme-dark) .markdown-preview-view,
+body.fleurdict-reading-mode:not(.theme-dark) .markdown-reading-view {
+  background-color: #fdf6e3 !important;
+  color: #586e75 !important;
+  --background-primary: #fdf6e3 !important;
+  --background-primary-alt: #fdf6e3 !important;
+}
+
+/* All intermediate layers must be transparent */
+body.fleurdict-reading-mode:not(.theme-dark) .markdown-preview-view .markdown-preview-sizer,
+body.fleurdict-reading-mode:not(.theme-dark) .markdown-preview-view .markdown-preview-section,
+body.fleurdict-reading-mode:not(.theme-dark) .markdown-preview-view .markdown-preview-pusher,
+body.fleurdict-reading-mode:not(.theme-dark) .markdown-preview-view .markdown-preview-sizer > div,
+body.fleurdict-reading-mode:not(.theme-dark) .markdown-reading-view .markdown-preview-sizer,
+body.fleurdict-reading-mode:not(.theme-dark) .markdown-reading-view .markdown-preview-section {
+  background-color: transparent !important;
+  background: transparent !important;
+}
+
+/* Text colors */
+body.fleurdict-reading-mode:not(.theme-dark) .markdown-preview-view,
+body.fleurdict-reading-mode:not(.theme-dark) .markdown-reading-view {
+  color: #586e75 !important;
+}
+
+body.fleurdict-reading-mode:not(.theme-dark) .markdown-preview-view h1,
+body.fleurdict-reading-mode:not(.theme-dark) .markdown-preview-view h2,
+body.fleurdict-reading-mode:not(.theme-dark) .markdown-preview-view h3,
+body.fleurdict-reading-mode:not(.theme-dark) .markdown-preview-view h4,
+body.fleurdict-reading-mode:not(.theme-dark) .markdown-preview-view h5,
+body.fleurdict-reading-mode:not(.theme-dark) .markdown-preview-view h6,
+body.fleurdict-reading-mode:not(.theme-dark) .markdown-reading-view h1,
+body.fleurdict-reading-mode:not(.theme-dark) .markdown-reading-view h2,
+body.fleurdict-reading-mode:not(.theme-dark) .markdown-reading-view h3,
+body.fleurdict-reading-mode:not(.theme-dark) .markdown-reading-view h4,
+body.fleurdict-reading-mode:not(.theme-dark) .markdown-reading-view h5,
+body.fleurdict-reading-mode:not(.theme-dark) .markdown-reading-view h6 {
+  color: #073642 !important;
+}
+
+body.fleurdict-reading-mode:not(.theme-dark) .markdown-preview-view a,
+body.fleurdict-reading-mode:not(.theme-dark) .markdown-reading-view a {
+  color: #268bd2 !important;
+}
+
+body.fleurdict-reading-mode:not(.theme-dark) .markdown-preview-view blockquote,
+body.fleurdict-reading-mode:not(.theme-dark) .markdown-reading-view blockquote {
+  border-left-color: #93a1a1 !important;
+  color: #657b83 !important;
+}
+
+body.fleurdict-reading-mode:not(.theme-dark) .markdown-preview-view code,
+body.fleurdict-reading-mode:not(.theme-dark) .markdown-reading-view code {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+  color: #cb4b16 !important;
+}
+
+/* === Dark theme: warm dark paper === */
+
+body.fleurdict-reading-mode.theme-dark {
+  --background-primary: #1a1a1a !important;
+  --background-primary-alt: #1a1a1a !important;
+  --background-secondary: #1a1a1a !important;
+  --background-secondary-alt: #1a1a1a !important;
+}
+
+body.fleurdict-reading-mode.theme-dark .workspace-leaf-content[data-type="markdown"],
+body.fleurdict-reading-mode.theme-dark .workspace-leaf.mod-active .workspace-leaf-content[data-type="markdown"] {
+  background-color: #1a1a1a !important;
+}
+
+body.fleurdict-reading-mode.theme-dark .markdown-preview-view,
+body.fleurdict-reading-mode.theme-dark .markdown-reading-view {
+  background-color: #1a1a1a !important;
+  color: #d4c5a9 !important;
+  --background-primary: #1a1a1a !important;
+}
+
+body.fleurdict-reading-mode.theme-dark .markdown-preview-view .markdown-preview-sizer,
+body.fleurdict-reading-mode.theme-dark .markdown-preview-view .markdown-preview-section,
+body.fleurdict-reading-mode.theme-dark .markdown-preview-view .markdown-preview-pusher,
+body.fleurdict-reading-mode.theme-dark .markdown-reading-view .markdown-preview-sizer,
+body.fleurdict-reading-mode.theme-dark .markdown-reading-view .markdown-preview-section {
+  background-color: transparent !important;
+  background: transparent !important;
+}
+
+body.fleurdict-reading-mode.theme-dark .markdown-preview-view h1,
+body.fleurdict-reading-mode.theme-dark .markdown-preview-view h2,
+body.fleurdict-reading-mode.theme-dark .markdown-preview-view h3,
+body.fleurdict-reading-mode.theme-dark .markdown-preview-view h4,
+body.fleurdict-reading-mode.theme-dark .markdown-preview-view h5,
+body.fleurdict-reading-mode.theme-dark .markdown-preview-view h6 {
+  color: #e8d5b7 !important;
+}
+
+/* === Reading mode highlights === */
+body.fleurdict-reading-mode .fleurdict-highlight-red {
+  background-color: rgba(255, 107, 107, 0.4) !important;
+  border-bottom: 2px solid #ff6b6b;
+}
+
+body.fleurdict-reading-mode .fleurdict-highlight-yellow {
+  background-color: rgba(255, 217, 61, 0.5) !important;
+  border-bottom: 2px solid #ffd93d;
+}
+
+body.fleurdict-reading-mode .fleurdict-highlight-green {
+  background-color: rgba(105, 240, 174, 0.4) !important;
+  border-bottom: 2px solid #69f0ae;
 }
 

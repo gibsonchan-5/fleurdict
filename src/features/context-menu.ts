@@ -48,10 +48,8 @@ export class ContextMenuManager {
    */
   private buildMenu(menu: Menu, editor: any): void {
     let selectedText = editor.getSelection().trim();
-    console.log('FleurDict: Context menu opened, selected text:', selectedText);
 
     if (!selectedText) {
-      console.log('FleurDict: No valid selection, skipping menu');
       return;
     }
 
@@ -75,23 +73,10 @@ export class ContextMenuManager {
     // (previously required the ENTIRE text to be English-only, which blocked sentences with punctuation)
     const hasEnglish = /[a-zA-Z]/.test(fullSelection);
     if (!hasEnglish) {
-      console.log('FleurDict: No English text found, skipping menu');
       return;
     }
 
-    // Check if reading mode is enabled
-    const isReadingMode = this.settings.readingModeEnabled;
-
-    if (isReadingMode) {
-      // Reading mode: clear all default menu items and show only FleurDict items
-      menu.clear();
-    }
-
-    console.log('FleurDict: Adding menu items for:', cleanWord, '| full selection:', fullSelection);
-    
-    if (!isReadingMode) {
-      menu.addSeparator();
-    }
+    menu.addSeparator();
 
     // Lookup word — uses extracted single word/phrase
     menu.addItem((item: MenuItem) => {
@@ -99,7 +84,6 @@ export class ContextMenuManager {
         .setTitle(`FleurDict 查词`)
         .setIcon('book-open')
         .onClick(() => {
-          console.log('FleurDict: Lookup clicked for:', cleanWord);
           this.selectionHandler.lookupWord(cleanWord);
         });
     });
@@ -120,7 +104,6 @@ export class ContextMenuManager {
         .setTitle('AI 翻译')
         .setIcon('languages')
         .onClick(() => {
-          console.log('FleurDict: AI translate for full text:', fullSelection);
           this.plugin.app.workspace.trigger('fleurdict:ai-translate', fullSelection);
         });
     });
@@ -131,14 +114,11 @@ export class ContextMenuManager {
         .setTitle('AI 详解')
         .setIcon('sparkles')
         .onClick(() => {
-          console.log('FleurDict: AI detail for full text:', fullSelection);
           this.plugin.app.workspace.trigger('fleurdict:ai-detail', fullSelection);
         });
     });
 
-    if (!isReadingMode) {
-      menu.addSeparator();
-    }
+    menu.addSeparator();
   }
 
   /**

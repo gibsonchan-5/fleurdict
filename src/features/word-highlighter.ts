@@ -4,9 +4,10 @@
  */
 
 import { ViewPlugin, ViewUpdate, Decoration, DecorationSet, EditorView } from '@codemirror/view';
-import { RangeSetBuilder } from '@codemirror/state';
-import type { Plugin, MarkdownView } from 'obsidian';
+import { RangeSetBuilder, StateField, StateEffect } from '@codemirror/state';
+import type { Plugin } from 'obsidian';
 import type { WordbookManager } from '../core/wordbook-manager';
+import type { FleurDictSettings } from '../types';
 
 // CSS classes for proficiency levels
 const PROFICIENCY_CLASSES = [
@@ -15,26 +16,80 @@ const PROFICIENCY_CLASSES = [
   'fleurdict-highlight-green',  // proficiency 2: 熟悉
 ];
 
+// Effect + StateField approach to reliably force decoration rebuild
+const refreshEffect = StateEffect.define<number>();
+const refreshField = StateField.define<number>({
+  create() { return 0; },
+  update(value, tr) {
+    for (const e of tr.effects) {
+      if (e.is(refreshEffect)) value += e.value;
+    }
+    return value;
+  },
+});
+
+// Global registry of all active highlight plugin instances
+const activeInstances = new Set<WordHighlightPlugin>();
+
+interface WordHighlightPlugin {
+  decorations: DecorationSet;
+  forceRefresh(): void;
+}
+
 /**
- * Create CM6 ViewPlugin for word highlighting
+ * Create CM6 ViewPlugin for word highlighting.
+ * Returns [refreshField, ViewPlugin] — both must be registered as editor extensions.
  */
 export function createWordHighlightPlugin(plugin: Plugin, wordbookManager: WordbookManager) {
-  return ViewPlugin.fromClass(
-    class {
+  const settings = (plugin as any).settings as FleurDictSettings;
+
+  /**
+   * Check if highlighting is disabled globally (settings toggle).
+   */
+  const isHighlightDisabled = (): boolean => {
+    if (!settings?.highlightEnabled) return true;
+    return false;
+  };
+
+  const highlightPlugin = ViewPlugin.fromClass(
+    class implements WordHighlightPlugin {
       decorations: DecorationSet;
+      private _dirty = true;
+      private _refreshCount = 0;
 
       constructor(private view: EditorView) {
-        this.decorations = this.buildDecorations();
+        this.decorations = Decoration.none;
+        this._dirty = true;
+        this._refreshCount = 0;
+        activeInstances.add(this);
       }
 
       update(update: ViewUpdate) {
-        if (update.docChanged || update.viewportChanged) {
+        // Check StateField counter — changes when a refresh effect is dispatched
+        const newCount = update.state.field(refreshField);
+        // Always rebuild on first call (_dirty=true) or when doc/viewport/effects change
+        if (this._dirty || update.docChanged || update.viewportChanged || newCount !== this._refreshCount) {
+          this._dirty = false;
+          this._refreshCount = newCount;
           this.decorations = this.buildDecorations();
         }
       }
 
+      forceRefresh() {
+        this._dirty = true;
+        this.view.dispatch({
+          effects: refreshEffect.of(1),
+        });
+      }
+
+      destroy() {
+        activeInstances.delete(this);
+      }
+
       buildDecorations(): DecorationSet {
-        const builder = new RangeSetBuilder<Decoration>();
+        // Global toggle check
+        if (isHighlightDisabled()) return Decoration.none;
+
         const allWords = wordbookManager.getAllEntries();
 
         // Filter words that need highlighting (proficiency 0, 1, 2)
@@ -50,18 +105,25 @@ export function createWordHighlightPlugin(plugin: Plugin, wordbookManager: Wordb
           return Decoration.none;
         }
 
-        // Iterate over visible ranges for performance
-        for (const { from, to } of this.view.visibleRanges) {
-          const text = this.view.state.doc.sliceString(from, to);
+        // CRITICAL: RangeSetBuilder requires decorations to be added in sorted order
+        // We must collect all decorations first, sort them, then add to builder
+        interface DecorationItem {
+          from: number;
+          to: number;
+          cls: string;
+        }
+        const items: DecorationItem[] = [];
+        const highlighted = new Set<number>();
+
+        // Iterate over visible ranges - these are already sorted by CM6
+        for (const range of this.view.visibleRanges) {
+          const text = this.view.state.doc.sliceString(range.from, range.to);
           const lines = text.split('\n');
-          let offset = from;
+          let offset = range.from;
 
           for (const lineText of lines) {
-            // Track which character positions are already highlighted to avoid overlap
-            const highlighted = new Set<number>();
-
+            // Collect matches for this line
             for (const { word, cls } of wordsByLength) {
-              // Escape regex special characters
               const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
               const regex = new RegExp(`\\b${escaped}\\b`, 'gi');
               let match;
@@ -83,12 +145,29 @@ export function createWordHighlightPlugin(plugin: Plugin, wordbookManager: Wordb
                 // Mark positions as highlighted
                 for (let i = start; i < end; i++) highlighted.add(i);
 
-                builder.add(start, end, Decoration.mark({ class: cls }));
+                items.push({ from: start, to: end, cls });
               }
             }
 
             offset += lineText.length + 1; // +1 for newline
           }
+        }
+
+        if (items.length === 0) {
+          return Decoration.none;
+        }
+
+        // CRITICAL: Sort by 'from' position, then by 'to' position for same 'from'
+        // This is required by CodeMirror's RangeSetBuilder
+        items.sort((a, b) => {
+          if (a.from !== b.from) return a.from - b.from;
+          return a.to - b.to;
+        });
+
+        // Build the DecorationSet
+        const builder = new RangeSetBuilder<Decoration>();
+        for (const { from, to, cls } of items) {
+          builder.add(from, to, Decoration.mark({ class: cls }));
         }
 
         return builder.finish();
@@ -98,22 +177,17 @@ export function createWordHighlightPlugin(plugin: Plugin, wordbookManager: Wordb
       decorations: (v) => v.decorations,
     }
   );
+
+  // Must register both: the StateField (to hold the counter) AND the ViewPlugin
+  return [refreshField, highlightPlugin];
 }
 
 /**
  * Refresh all editor views to re-render highlights
  * Call this after wordbook changes (add word, review, etc.)
  */
-export function refreshAllEditorHighlights(plugin: Plugin) {
-  plugin.app.workspace.iterateAllLeaves((leaf) => {
-    const view = leaf.view;
-    if (view.getViewType() === 'markdown') {
-      const markdownView = view as MarkdownView;
-      const cm = (markdownView.editor as any)?.cm;
-      if (cm) {
-        // Dispatch empty transaction to trigger ViewPlugin update
-        cm.dispatch({});
-      }
-    }
+export function refreshAllEditorHighlights(_plugin?: Plugin) {
+  activeInstances.forEach(instance => {
+    instance.forceRefresh();
   });
 }

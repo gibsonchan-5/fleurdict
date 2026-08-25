@@ -428,8 +428,22 @@ export class AISidebarView extends ItemView {
     this.sendMessage(message);
   }
 
-  async onClose() {
-    this.stopStreaming();
-    this.component.unload();
+  onClose(): void {
+    // navigation is now false (override above), so ItemView.onClose() skips
+    // the navigation-stack branch that crashes in Obsidian 1.13.7.
+    try { this.stopStreaming(); } catch (_) {}
+    try { this.component.unload(); } catch (_) {}
+    try {
+      const children: any[] = Array.isArray((this as any).children) ? (this as any).children : [];
+      for (const c of children) {
+        try { c.unload?.(); } catch (_) {}
+      }
+      (this as any).children = [];
+    } catch (_) {}
+    try {
+      const content = this.containerEl?.children?.[1];
+      if (content) content.empty();
+    } catch (_) {}
+    try { super.onClose(); } catch (_) {}
   }
 }

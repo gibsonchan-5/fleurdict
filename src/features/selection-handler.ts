@@ -26,13 +26,14 @@ export class SelectionHandler {
   }
 
   register(): void {
-    // Listen for double-click with Cmd/Ctrl to lookup word
+    // Listen for double-click to lookup word (no modifier key required)
     this.plugin.registerDomEvent(document, 'dblclick', (evt: MouseEvent) => {
-      // Check if Cmd (Mac) or Ctrl (Windows) is pressed
-      if (!evt.metaKey && !evt.ctrlKey) return;
-
       const activeView = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
       if (!activeView) return;
+
+      // Only handle editor mode, not preview/reading mode
+      const mode = activeView.getMode();
+      if (mode !== 'source') return;
 
       const editor = activeView.editor;
       const pos = editor.posAtMouse(evt);
@@ -41,7 +42,9 @@ export class SelectionHandler {
       // Get word at position
       const line = editor.getLine(pos.line);
       const wordMatch = this.getWordAtPosition(line, pos.ch);
-      if (!wordMatch) return;
+      if (!wordMatch) {
+        return;
+      }
 
       evt.preventDefault();
       evt.stopPropagation();
@@ -81,22 +84,18 @@ export class SelectionHandler {
    */
   async lookupWord(word?: string): Promise<void> {
     let queryWord = word;
-    console.log('FleurDict: lookupWord called with:', word);
 
     if (!queryWord) {
       queryWord = this.getSelection();
     }
 
     if (!queryWord) {
-      console.log('FleurDict: No word to lookup');
       return;
     }
 
     queryWord = queryWord.trim().toLowerCase();
-    console.log('FleurDict: Querying:', queryWord);
 
     if (!/[a-zA-Z]/.test(queryWord)) {
-      console.log('FleurDict: Not a valid word');
       return;
     }
 
@@ -106,7 +105,6 @@ export class SelectionHandler {
 
     try {
       const results = await this.dictEngine.query(queryWord);
-      console.log('FleurDict: Query results:', results);
 
       if (results.length === 0 || results[0].entries.length === 0) {
         this.dictPopup.showError(queryWord, '未找到该单词的释义');
@@ -130,7 +128,6 @@ export class SelectionHandler {
           }, 50);
         },
       });
-      console.log('FleurDict: Popup shown with results');
     } catch (error) {
       console.error('FleurDict: Lookup failed:', error);
       this.dictPopup.showError(queryWord, '查询失败，请稍后重试');

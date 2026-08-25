@@ -13,6 +13,7 @@ import { EudicService } from './core/eudic-service';
 import { SelectionHandler } from './features/selection-handler';
 import { ContextMenuManager } from './features/context-menu';
 import { CommandManager } from './features/commands';
+import { ReadingModeHandler } from './features/reading-mode-handler';
 import { FleurDictSettingTab } from './settings';
 import { showAITranslation, showAIDetail } from './ui/ai-modal';
 import { AISidebarView, AI_SIDEBAR_VIEW_TYPE } from './ui/ai-sidebar';
@@ -33,11 +34,9 @@ export default class FleurDictPlugin extends Plugin {
   selectionHandler!: SelectionHandler;
   contextMenuManager!: ContextMenuManager;
   commandManager!: CommandManager;
+  readingModeHandler!: ReadingModeHandler;
 
   async onload() {
-    console.log('[FleurDict-DIAG] === Plugin loading BUILD v2026-08-22-1925 ===');
-    console.log('[FleurDict-DIAG] Loading plugin...');
-
     // Load settings
     await this.loadSettings();
 
@@ -61,11 +60,19 @@ export default class FleurDictPlugin extends Plugin {
       this.wordbookManager,
       this.flashcardEngine
     );
+    this.readingModeHandler = new ReadingModeHandler(
+      this,
+      this.wordbookManager,
+      this.selectionHandler
+    );
 
     // Register event handlers
     this.selectionHandler.register();
     this.contextMenuManager.register();
     this.commandManager.register();
+    this.readingModeHandler.register();
+
+    // Initialize reading mode handler (auto-detects preview mode, no toggle needed)
 
     // Register settings tab
     this.addSettingTab(new FleurDictSettingTab(this.app, this));
@@ -80,8 +87,28 @@ export default class FleurDictPlugin extends Plugin {
       return new WordbookView(leaf, this.settings, this.wordbookManager, this.dictEngine);
     });
 
-    // Register word highlight CM6 extension
-    this.registerEditorExtension(createWordHighlightPlugin(this, this.wordbookManager));
+    // Force-detach all existing leaves for our views to clear any stale/orphan
+    // leaves from previous sessions (e.g. "插件不再活动" errors caused by the
+    // workspace caching a view state from a broken build). This is safe because
+    // registerView has already wired up the factory — any leaf that was open
+    // will be recreated by Obsidian on the next reveal.
+    // Defer to next tick so view registration is fully wired up first.
+    this.app.workspace.onLayoutReady(() => {
+      for (const viewType of [WORDBOOK_VIEW_TYPE, AI_SIDEBAR_VIEW_TYPE]) {
+        try {
+          const leaves = this.app.workspace.getLeavesOfType(viewType);
+          for (const leaf of leaves) {
+            leaf.detach();
+          }
+        } catch (e) {
+          console.warn(`FleurDict: orphan cleanup for ${viewType} failed:`, e);
+        }
+      }
+    });
+
+    // Register word highlight CM6 extensions (StateField + ViewPlugin)
+    const highlightExtensions = createWordHighlightPlugin(this, this.wordbookManager);
+    this.registerEditorExtension(highlightExtensions);
 
     // Register workspace events
     this.registerWorkspaceEvents();
@@ -90,28 +117,30 @@ export default class FleurDictPlugin extends Plugin {
     this.addRibbonIcon('book-open', 'FleurDict 生词本', () => {
       this.activateWordbookView();
     });
-
-    // Ribbon: 阅读模式切换按钮
-    this.addRibbonIcon('book', 'FleurDict 阅读模式', () => {
-      this.settings.readingModeEnabled = !this.settings.readingModeEnabled;
-      this.saveSettings();
-      new Notice(this.settings.readingModeEnabled 
-        ? '✓ 已启用阅读模式，右键菜单仅显示 FleurDict 功能' 
-        : '已关闭阅读模式，恢复完整右键菜单');
-    });
-
-    console.log('FleurDict: Plugin loaded successfully');
   }
 
   onunload() {
-    console.log('FleurDict: Unloading plugin...');
 
     // Unregister event handlers
-    this.selectionHandler.unregister();
+    try {
+      this.selectionHandler.unregister();
+      this.readingModeHandler.unregister();
+    } catch (e) {
+      console.error('FleurDict: Error unregistering handlers:', e);
+    }
 
-    // Detach custom views to prevent "error while closing"
-    this.app.workspace.detachLeavesOfType(AI_SIDEBAR_VIEW_TYPE);
-    this.app.workspace.detachLeavesOfType(WORDBOOK_VIEW_TYPE);
+    // Detach custom views to prevent "error while closing".
+    // Wrap each detach in try/catch so one failing view doesn't break the others.
+    try {
+      this.app.workspace.detachLeavesOfType(AI_SIDEBAR_VIEW_TYPE);
+    } catch (e) {
+      console.error('FleurDict: Error detaching AI sidebar:', e);
+    }
+    try {
+      this.app.workspace.detachLeavesOfType(WORDBOOK_VIEW_TYPE);
+    } catch (e) {
+      console.error('FleurDict: Error detaching wordbook view:', e);
+    }
   }
 
   /**
@@ -128,7 +157,6 @@ export default class FleurDictPlugin extends Plugin {
     if (this.settings.eudicCategoryId && this.settings.eudicCategoryId !== '0') {
       this.settings.eudicCategoryId = '0';
     }
-    console.log('FleurDict: Loaded settings, dictionarySource =', this.settings.dictionarySource);
   }
 
   /**
@@ -218,8 +246,11 @@ export default class FleurDictPlugin extends Plugin {
       // Add to local wordbook
       await this.wordbookManager.addEntry(word, meaning, phonetic, context, undefined, audioUrlUK, audioUrlUS);
 
-      // Refresh editor highlights
+      // Refresh editor highlights (CM6 decorations)
       refreshAllEditorHighlights(this);
+
+      // Refresh reading/preview mode highlights (DOM-based)
+      this.readingModeHandler?.refreshAllReadingViews();
 
       // Refresh wordbook view if open
       const leaves = this.app.workspace.getLeavesOfType(WORDBOOK_VIEW_TYPE);
@@ -236,7 +267,6 @@ export default class FleurDictPlugin extends Plugin {
           await this.eudicService.addWord(word, context);
           new Notice(`✓ "${word}" 已加入生词本并同步到欧路`);
         } catch (e) {
-          console.warn('FleurDict: Eudic sync failed for', word, e);
           const errMsg = e instanceof Error ? e.message : String(e);
           new Notice(`✓ "${word}" 已加入本地生词本（欧路同步失败：${errMsg}）`, 6000);
         }

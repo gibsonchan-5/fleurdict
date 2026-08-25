@@ -39,12 +39,24 @@ export class WordbookManager {
       if (wordsData?.wordbook) {
         this.data = wordsData.wordbook;
         // 为旧数据添加分级字段默认值
+        let migrated = false;
         const migrate = (entry: WordEntry) => {
-          if (entry.proficiency === undefined) entry.proficiency = 0;
-          if (entry.consecutiveCorrect === undefined) entry.consecutiveCorrect = 0;
+          if (entry.proficiency === undefined) {
+            entry.proficiency = 0;
+            migrated = true;
+          }
+          if (entry.consecutiveCorrect === undefined) {
+            entry.consecutiveCorrect = 0;
+            migrated = true;
+          }
         };
         this.data.words.forEach(migrate);
         this.data.phrases.forEach(migrate);
+        
+        // 如果有迁移，立即保存到 storage
+        if (migrated) {
+          await this.save();
+        }
       }
     } catch (error) {
       console.error('FleurDict: Failed to load wordbook:', error);

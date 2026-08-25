@@ -637,17 +637,36 @@ export class FleurDictSettingTab extends PluginSettingTab {
           });
       });
 
-    // Reading Mode
-    new Setting(uiSection)
-      .setName('阅读模式')
-      .setDesc('启用后，右键菜单只显示 FleurDict 功能（查词、加入生词本、AI 翻译、AI 详解），隐藏 Obsidian 默认菜单项')
+    // Reading mode is auto-detected: when user switches to Obsidian's preview mode,
+    // the right-click menu automatically shows only FleurDict functions.
+    // No toggle needed.
+
+    // =========================================================================
+    // Section 6.5: Highlight Control
+    // =========================================================================
+    const highlightSection = containerEl.createDiv('fleurdict-settings-section');
+    highlightSection.createEl('h3', { text: '生词高亮控制', cls: 'fleurdict-settings-title' });
+
+    highlightSection.createEl('p', {
+      text: '全局开关：关闭后所有笔记（编辑模式与阅读模式）都不再高亮生词，不影响生词本数据。',
+      cls: 'fleurdict-settings-desc',
+    });
+
+    new Setting(highlightSection)
+      .setName('启用生词高亮')
+      .setDesc('关闭后所有笔记（编辑与阅读模式）都不再高亮生词（不影响生词本数据）')
       .addToggle((toggle) => {
         toggle
-          .setValue(this.plugin.settings.readingModeEnabled)
+          .setValue(this.plugin.settings.highlightEnabled)
           .onChange(async (value) => {
-            this.plugin.settings.readingModeEnabled = value;
+            this.plugin.settings.highlightEnabled = value;
             await this.plugin.saveSettings();
-            new Notice(value ? '✓ 已启用阅读模式，右键菜单仅显示 FleurDict 功能' : '已关闭阅读模式');
+            // Trigger refresh on all editors
+            const { refreshAllEditorHighlights } = await import('./features/word-highlighter');
+            refreshAllEditorHighlights(this.plugin);
+            // Also refresh reading-mode views to apply/remove highlights
+            (this.plugin as any).readingModeHandler?.refreshAllReadingViews?.();
+            new Notice(value ? '✓ 已启用生词高亮' : '已关闭生词高亮');
           });
       });
 
