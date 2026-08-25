@@ -102,6 +102,22 @@ export function escapeHtml(text: string): string {
 }
 
 /**
+ * Sanitize HTML to prevent XSS attacks
+ * Removes script tags, event handlers, and dangerous protocols
+ */
+export function sanitizeHTML(html: string): string {
+  // Remove script tags
+  let sanitized = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+  // Remove on* event handlers
+  sanitized = sanitized.replace(/\son\w+\s*=\s*["'][^"']*["']/gi, '');
+  // Remove javascript: protocol
+  sanitized = sanitized.replace(/href\s*=\s*["']javascript:[^"']*["']/gi, '');
+  // Remove data: protocol in src (except images)
+  sanitized = sanitized.replace(/src\s*=\s*["']data:(?!image\/)[^"']*["']/gi, '');
+  return sanitized;
+}
+
+/**
  * Truncate text with ellipsis
  */
 export function truncate(text: string, maxLength: number): string {

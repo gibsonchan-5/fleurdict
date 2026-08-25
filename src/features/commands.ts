@@ -39,7 +39,7 @@ export class CommandManager {
   register(): void {
     // Quick lookup
     this.plugin.addCommand({
-      id: 'fleurdict-lookup',
+      id: 'lookup',
       name: '查询选中单词',
       callback: () => {
         this.selectionHandler.lookupWord();
@@ -48,7 +48,7 @@ export class CommandManager {
 
     // Lookup with input
     this.plugin.addCommand({
-      id: 'fleurdict-lookup-input',
+      id: 'lookup-input',
       name: '查询单词（手动输入）',
       callback: () => {
         this.showLookupInput();
@@ -57,7 +57,7 @@ export class CommandManager {
 
     // Add to wordbook
     this.plugin.addCommand({
-      id: 'fleurdict-add-to-wordbook',
+      id: 'add-to-wordbook',
       name: '将选中单词加入生词本',
       callback: () => {
         const selection = window.getSelection();
@@ -72,7 +72,7 @@ export class CommandManager {
 
     // Flashcard review
     this.plugin.addCommand({
-      id: 'fleurdict-flashcard-review',
+      id: 'flashcard-review',
       name: '开始闪卡复习',
       callback: () => {
         this.plugin.app.workspace.trigger('fleurdict:start-flashcard');
@@ -81,7 +81,7 @@ export class CommandManager {
 
     // Close popup
     this.plugin.addCommand({
-      id: 'fleurdict-close-popup',
+      id: 'close-popup',
       name: '关闭词典弹窗',
       checkCallback: (checking) => {
         if (this.selectionHandler.isPopupVisible()) {
@@ -96,7 +96,7 @@ export class CommandManager {
 
     // Open wordbook view
     this.plugin.addCommand({
-      id: 'fleurdict-open-wordbook',
+      id: 'open-wordbook',
       name: '打开生词本',
       callback: () => {
         this.plugin.app.workspace.trigger('fleurdict:open-wordbook');
@@ -105,7 +105,7 @@ export class CommandManager {
 
     // Export wordbook
     this.plugin.addCommand({
-      id: 'fleurdict-export-wordbook',
+      id: 'export-wordbook',
       name: '导出生词本为 Markdown',
       callback: () => {
         this.plugin.app.workspace.trigger('fleurdict:export-wordbook');
