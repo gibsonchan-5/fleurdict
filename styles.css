@@ -117,6 +117,219 @@
   cursor: move;
 }
 
+/* Dragging state for document body */
+.fleurdict-dragging {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+/* Generic hide class */
+.fleurdict-hidden {
+  display: none !important;
+}
+
+/* AI modal initial styles (replaces inline style assignments) */
+.fleurdict-ai-modal {
+  max-width: none !important;
+  position: fixed !important;
+  margin: 0 !important;
+  left: 0 !important;
+  top: 0 !important;
+  will-change: transform;
+}
+
+.fleurdict-ai-modal.is-dragging {
+  cursor: grabbing !important;
+}
+
+.fleurdict-ai-title-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  cursor: grab;
+  user-select: none;
+}
+
+.fleurdict-ai-title-bar.is-dragging {
+  cursor: grabbing !important;
+}
+
+.fleurdict-ai-title-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+.fleurdict-ai-content {
+  flex: 1;
+  min-height: 100px;
+  overflow: auto;
+  padding: 16px;
+  background-color: var(--background-secondary);
+  border-radius: 8px;
+  line-height: 1.6;
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+.fleurdict-ai-modal-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.fleurdict-ai-modal-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.fleurdict-ai-resize-handle {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 18px;
+  height: 18px;
+  cursor: nwse-resize;
+  z-index: 10;
+  color: var(--text-faint);
+  opacity: 0.4;
+  transition: opacity 0.15s;
+}
+
+.fleurdict-ai-resize-handle:hover {
+  opacity: 0.8;
+}
+
+.fleurdict-ai-loading {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.fleurdict-ai-buttons {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.fleurdict-ai-render-area {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.fleurdict-ai-original-label {
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-style: normal;
+}
+
+.fleurdict-ai-error-text {
+  color: var(--text-error) !important;
+}
+
+.fleurdict-stop-btn {
+  display: none;
+}
+
+/* Markdown content classes (replaces inline styles in renderContent) */
+.fleurdict-ai-hr {
+  margin: 12px 0;
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.fleurdict-ai-h4 {
+  margin: 12px 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.fleurdict-ai-h3 {
+  margin: 14px 0 6px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.fleurdict-ai-h2 {
+  margin: 16px 0 8px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.fleurdict-ai-h1 {
+  margin: 18px 0 10px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.fleurdict-ai-ul {
+  margin: 4px 0;
+  padding-left: 20px;
+  list-style: disc;
+}
+
+.fleurdict-ai-li {
+  margin: 2px 0;
+}
+
+.fleurdict-ai-oli {
+  margin: 4px 0;
+  padding-left: 24px;
+  line-height: 1.7;
+}
+
+.fleurdict-ai-bq {
+  margin: 8px 0;
+  padding: 8px 14px;
+  border-left: 3px solid var(--interactive-accent, teal);
+  background: var(--background-secondary, rgba(0,0,0,0.03));
+  border-radius: 0 6px 6px 0;
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+.fleurdict-ai-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: 13px;
+}
+
+.fleurdict-ai-th {
+  border: 1px solid var(--border-subtle, rgba(0,0,0,0.1));
+  padding: 6px 10px;
+  text-align: left;
+  font-weight: 600;
+  background: var(--background-secondary, rgba(0,0,0,0.04));
+}
+
+.fleurdict-ai-td {
+  border: 1px solid var(--border-subtle, rgba(0,0,0,0.1));
+  padding: 6px 10px;
+}
+
+.fleurdict-ai-p {
+  margin: 6px 0;
+  line-height: 1.7;
+}
+
+.fleurdict-ai-link {
+  color: var(--interactive-accent, teal);
+}
+
+.fleurdict-ai-code {
+  background: var(--background-modifier-cover);
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
 .fleurdict-word {
   font-size: 22px;
   font-weight: 700;

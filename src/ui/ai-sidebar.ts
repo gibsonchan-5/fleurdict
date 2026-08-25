@@ -121,7 +121,6 @@ export class AISidebarView extends ItemView {
 
     const stopBtn = buttonRow.createEl('button', { cls: 'fleurdict-stop-btn' });
     stopBtn.setText('停止');
-    stopBtn.style.display = 'none';
     stopBtn.addEventListener('click', () => this.stopStreaming());
   }
 
@@ -392,11 +391,11 @@ export class AISidebarView extends ItemView {
    */
   private setStreamingState(streaming: boolean) {
     if (this.sendBtn) {
-      this.sendBtn.style.display = streaming ? 'none' : '';
+      this.sendBtn.toggleClass('is-hidden', streaming);
     }
     const stopBtn = this.containerEl.querySelector('.fleurdict-stop-btn') as HTMLElement;
     if (stopBtn) {
-      stopBtn.style.display = streaming ? '' : 'none';
+      stopBtn.toggleClass('is-hidden', !streaming);
     }
     if (this.inputEl) {
       this.inputEl.disabled = streaming;
