@@ -76,13 +76,10 @@ export class AIModal extends Modal {
 
     // Modal styling — remove Obsidian's centered constraints
     modalEl.addClass('fleurdict-ai-modal');
-    modalEl.style.maxWidth = 'none';
-    modalEl.style.width = `${w}px`;
-    modalEl.style.height = `${h}px`;
-
-    // Force fixed positioning so drag math is consistent (viewport coordinates)
-    modalEl.style.position = 'fixed';
-    modalEl.style.margin = '0';
+    modalEl.setCssStyles({
+      width: `${w}px`,
+      height: `${h}px`
+    });
 
     // Restore saved position, or center on first open
     if (left !== undefined && top !== undefined) {
@@ -95,10 +92,11 @@ export class AIModal extends Modal {
       this.translateX = Math.round((vw - w) / 2);
       this.translateY = Math.round((vh - h) / 2);
     }
-    modalEl.style.left = '0';
-    modalEl.style.top = '0';
-    modalEl.style.transform = `translate(${this.translateX}px, ${this.translateY}px)`;
-    modalEl.style.willChange = 'transform';
+    modalEl.setCssStyles({
+      left: '0px',
+      top: '0px',
+      transform: `translate(${this.translateX}px, ${this.translateY}px)`
+    });
 
     // Title bar (draggable handle) — static styles via CSS class
     contentEl.empty();
@@ -168,10 +166,10 @@ export class AIModal extends Modal {
       // Record mouse position relative to modal's current transform origin
       this.dragOffsetX = e.clientX - this.translateX;
       this.dragOffsetY = e.clientY - this.translateY;
-      modalEl.style.cursor = 'grabbing';
-      titleBar.style.cursor = 'grabbing';
-      // Prevent text selection during drag
-      document.body.style.userSelect = 'none';
+      // Use CSS classes for cursor/user-select state
+      modalEl.addClass('is-dragging');
+      titleBar.addClass('is-dragging');
+      document.body.addClass('fleurdict-dragging');
       e.preventDefault();
     });
 
@@ -183,7 +181,7 @@ export class AIModal extends Modal {
       this.resizeStartH = modalEl.offsetHeight;
       this.resizeStartX = e.clientX;
       this.resizeStartY = e.clientY;
-      document.body.style.userSelect = 'none';
+      document.body.addClass('fleurdict-dragging');
       e.preventDefault();
       e.stopPropagation();
     });
@@ -204,29 +202,28 @@ export class AIModal extends Modal {
         this.translateY = Math.max(0, Math.min(vh - 60, this.translateY));
 
         // Apply transform (GPU-composited, no reflow)
-        modalEl.style.transform = `translate(${this.translateX}px, ${this.translateY}px)`;
+        modalEl.setCssStyles({ transform: `translate(${this.translateX}px, ${this.translateY}px)` });
       }
       if (this.isResizing) {
         const newW = Math.max(420, this.resizeStartW + (e.clientX - this.resizeStartX));
         const newH = Math.max(300, this.resizeStartH + (e.clientY - this.resizeStartY));
-        modalEl.style.width = `${newW}px`;
-        modalEl.style.height = `${newH}px`;
+        modalEl.setCssStyles({ width: `${newW}px`, height: `${newH}px` });
       }
     };
 
     const onGlobalMouseUp = () => {
       if (this.isDragging) {
         this.isDragging = false;
-        modalEl.style.cursor = '';
-        titleBar.style.cursor = 'grab';
-        document.body.style.userSelect = '';
+        modalEl.removeClass('is-dragging');
+        titleBar.removeClass('is-dragging');
+        document.body.removeClass('fleurdict-dragging');
         // Persist final position (fire-and-forget is fine here)
-        this.saveGeometry().catch(() => {});
+        this.saveGeometry().catch(() => { /* save errors are non-critical */ });
       }
       if (this.isResizing) {
         this.isResizing = false;
         // Persist geometry
-        this.saveGeometry().catch(() => {});
+        this.saveGeometry().catch(() => { /* save errors are non-critical */ });
       }
     };
 

@@ -55,8 +55,8 @@ export class DictPopup {
    */
   private async savePopupRect(): Promise<void> {
     if (!this.container) return;
-    const left = parseInt(this.container.style.left || '0', 10);
-    const top = parseInt(this.container.style.top || '0', 10);
+    const left = this.container.offsetLeft;
+    const top = this.container.offsetTop;
     const width = this.container.offsetWidth;
     const height = this.container.offsetHeight;
     this.settings.popupLeft = left;
@@ -78,13 +78,17 @@ export class DictPopup {
     const l = this.settings.popupLeft;
     const t = this.settings.popupTop;
     const h = this.settings.popupHeight;
+    const styles: Partial<CSSStyleDeclaration> = {};
     if (l != null && t != null) {
-      this.container.style.left = `${l}px`;
-      this.container.style.top = `${t}px`;
+      styles.left = `${l}px`;
+      styles.top = `${t}px`;
     }
     // Restore saved height if available
     if (h != null && h > 0) {
-      this.container.style.height = `${h}px`;
+      styles.height = `${h}px`;
+    }
+    if (Object.keys(styles).length > 0) {
+      this.container.setCssStyles(styles);
     }
   }
 
@@ -104,11 +108,10 @@ export class DictPopup {
       this.isDragging = true;
       this.dragStartX = e.clientX;
       this.dragStartY = e.clientY;
-      this.containerStartLeft = parseInt(this.container!.style.left || '0', 10);
-      this.containerStartTop = parseInt(this.container!.style.top || '0', 10);
+      this.containerStartLeft = this.container!.offsetLeft;
+      this.containerStartTop = this.container!.offsetTop;
       // Disable user select during drag for smoother following
-      document.body.style.userSelect = 'none';
-      document.body.style.webkitUserSelect = 'none';
+      document.body.addClass('fleurdict-dragging');
     });
   }
 
@@ -120,8 +123,10 @@ export class DictPopup {
       if (!this.isDragging || !this.container) return;
       const dx = e.clientX - this.dragStartX;
       const dy = e.clientY - this.dragStartY;
-      this.container.style.left = `${this.containerStartLeft + dx}px`;
-      this.container.style.top = `${this.containerStartTop + dy}px`;
+      this.container.setCssStyles({
+        left: `${this.containerStartLeft + dx}px`,
+        top: `${this.containerStartTop + dy}px`
+      });
     };
 
     const onDragUp = () => {
@@ -130,8 +135,7 @@ export class DictPopup {
         document.removeEventListener('mousemove', onDragMove);
         document.removeEventListener('mouseup', onDragUp);
         // Restore user select
-        document.body.style.userSelect = '';
-        document.body.style.webkitUserSelect = '';
+        document.body.removeClass('fleurdict-dragging');
         this.savePopupRect();
       }
     };
@@ -161,7 +165,9 @@ export class DictPopup {
         if (!this.isResizing || !this.container) return;
         const dy = moveEvent.clientY - this.resizeStartY;
         const newHeight = Math.max(300, this.containerStartHeight + dy);
-        this.container.style.height = `${newHeight}px`;
+        this.container.setCssStyles({
+          height: `${newHeight}px`
+        });
       };
 
       const onResizeUp = () => {
@@ -339,15 +345,30 @@ export class DictPopup {
     const content = document.createElement('div');
     content.addClass('fleurdict-popup-content');
 
-    content.innerHTML = `
-      <div class="fleurdict-popup-header">
-        <span class="fleurdict-word">${escapeHtml(word)}</span>
-        <span class="fleurdict-error">未找到释义</span>
-      </div>
-      <div class="fleurdict-popup-body">
-        <p class="fleurdict-error-message">${escapeHtml(message)}</p>
-      </div>
-    `;
+    // Build error popup using DOM methods
+    const header = document.createElement('div');
+    header.addClass('fleurdict-popup-header');
+
+    const wordEl = document.createElement('span');
+    wordEl.addClass('fleurdict-word');
+    wordEl.textContent = word;
+    header.appendChild(wordEl);
+
+    const errorEl = document.createElement('span');
+    errorEl.addClass('fleurdict-error');
+    errorEl.textContent = '未找到释义';
+    header.appendChild(errorEl);
+
+    const body = document.createElement('div');
+    body.addClass('fleurdict-popup-body');
+
+    const messageEl = document.createElement('p');
+    messageEl.addClass('fleurdict-error-message');
+    messageEl.textContent = message;
+    body.appendChild(messageEl);
+
+    content.appendChild(header);
+    content.appendChild(body);
 
     this.container.appendChild(content);
     document.body.appendChild(this.container);
@@ -624,8 +645,10 @@ export class DictPopup {
       top = margin;
     }
 
-    this.container.style.left = `${left}px`;
-    this.container.style.top = `${top}px`;
+    this.container.setCssStyles({
+      left: `${left}px`,
+      top: `${top}px`
+    });
   }
 
   /**
