@@ -637,6 +637,20 @@ export class FleurDictSettingTab extends PluginSettingTab {
           });
       });
 
+    // Reading Mode
+    new Setting(uiSection)
+      .setName('阅读模式')
+      .setDesc('启用后，右键菜单只显示 FleurDict 功能（查词、加入生词本、AI 翻译、AI 详解），隐藏 Obsidian 默认菜单项')
+      .addToggle((toggle) => {
+        toggle
+          .setValue(this.plugin.settings.readingModeEnabled)
+          .onChange(async (value) => {
+            this.plugin.settings.readingModeEnabled = value;
+            await this.plugin.saveSettings();
+            new Notice(value ? '✓ 已启用阅读模式，右键菜单仅显示 FleurDict 功能' : '已关闭阅读模式');
+          });
+      });
+
     // =========================================================================
     // 数据来源与免责声明（放在最末尾）
     // =========================================================================

@@ -18,6 +18,7 @@ import { showAITranslation, showAIDetail } from './ui/ai-modal';
 import { AISidebarView, AI_SIDEBAR_VIEW_TYPE } from './ui/ai-sidebar';
 import { FlashcardModal } from './ui/flashcard-modal';
 import { WordbookView, WORDBOOK_VIEW_TYPE } from './ui/wordbook-view';
+import { createWordHighlightPlugin, refreshAllEditorHighlights } from './features/word-highlighter';
 
 /**
  * FleurDict Plugin
@@ -79,12 +80,24 @@ export default class FleurDictPlugin extends Plugin {
       return new WordbookView(leaf, this.settings, this.wordbookManager, this.dictEngine);
     });
 
+    // Register word highlight CM6 extension
+    this.registerEditorExtension(createWordHighlightPlugin(this, this.wordbookManager));
+
     // Register workspace events
     this.registerWorkspaceEvents();
 
-    // Ribbon: 只保留生词本入口（查词走右键菜单，AI 走右键菜单）
+    // Ribbon: 生词本入口
     this.addRibbonIcon('book-open', 'FleurDict 生词本', () => {
       this.activateWordbookView();
+    });
+
+    // Ribbon: 阅读模式切换按钮
+    this.addRibbonIcon('book', 'FleurDict 阅读模式', () => {
+      this.settings.readingModeEnabled = !this.settings.readingModeEnabled;
+      this.saveSettings();
+      new Notice(this.settings.readingModeEnabled 
+        ? '✓ 已启用阅读模式，右键菜单仅显示 FleurDict 功能' 
+        : '已关闭阅读模式，恢复完整右键菜单');
     });
 
     console.log('FleurDict: Plugin loaded successfully');
@@ -205,6 +218,9 @@ export default class FleurDictPlugin extends Plugin {
       // Add to local wordbook
       await this.wordbookManager.addEntry(word, meaning, phonetic, context, undefined, audioUrlUK, audioUrlUS);
 
+      // Refresh editor highlights
+      refreshAllEditorHighlights(this);
+
       // Refresh wordbook view if open
       const leaves = this.app.workspace.getLeavesOfType(WORDBOOK_VIEW_TYPE);
       for (const leaf of leaves) {
@@ -289,12 +305,14 @@ export default class FleurDictPlugin extends Plugin {
       this.flashcardEngine,
       session,
       () => {
-        // Update callback - refresh wordbook view if open
+        // Update callback - refresh wordbook view and editor highlights
         const leaves = this.app.workspace.getLeavesOfType(WORDBOOK_VIEW_TYPE);
         if (leaves.length > 0) {
           const view = leaves[0].view as WordbookView;
           view.refresh();
         }
+        // Refresh editor highlights after review
+        refreshAllEditorHighlights(this);
       }
     );
     modal.open();

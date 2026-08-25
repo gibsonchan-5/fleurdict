@@ -26,7 +26,35 @@ export class SelectionHandler {
   }
 
   register(): void {
-    // No automatic event listeners - all triggered via context menu
+    // Listen for double-click with Cmd/Ctrl to lookup word
+    this.plugin.registerDomEvent(document, 'dblclick', (evt: MouseEvent) => {
+      // Check if Cmd (Mac) or Ctrl (Windows) is pressed
+      if (!evt.metaKey && !evt.ctrlKey) return;
+
+      const activeView = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
+      if (!activeView) return;
+
+      const editor = activeView.editor;
+      const pos = editor.posAtMouse(evt);
+      if (!pos) return;
+
+      // Get word at position
+      const line = editor.getLine(pos.line);
+      const wordMatch = this.getWordAtPosition(line, pos.ch);
+      if (!wordMatch) return;
+
+      evt.preventDefault();
+      evt.stopPropagation();
+
+      // Set selection to the word
+      editor.setSelection(
+        { line: pos.line, ch: wordMatch.start },
+        { line: pos.line, ch: wordMatch.end }
+      );
+
+      // Lookup the word
+      this.lookupWord(wordMatch.word);
+    });
   }
 
   unregister(): void {
@@ -115,5 +143,29 @@ export class SelectionHandler {
 
   closePopup(): void {
     this.dictPopup.close();
+  }
+
+  /**
+   * Get word at cursor position
+   */
+  private getWordAtPosition(line: string, ch: number): { word: string; start: number; end: number } | null {
+    // Find word boundaries using regex
+    const wordRegex = /[a-zA-Z'-]+/g;
+    let match;
+    
+    while ((match = wordRegex.exec(line)) !== null) {
+      const start = match.index;
+      const end = start + match[0].length;
+      
+      if (ch >= start && ch <= end) {
+        return {
+          word: match[0],
+          start,
+          end
+        };
+      }
+    }
+    
+    return null;
   }
 }
