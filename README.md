@@ -126,6 +126,14 @@ npm run build    # 构建生产版本
 
 ### 📝 更新日志
 
+#### 1.3.0 (2026-08-25)
+- 🔒 隐私清理：移除所有调试日志，避免泄露用户数据
+- 🎨 统一 AI 弹窗按钮样式，增加悬停浮凸效果
+- 💡 简化高亮控制逻辑，移除单页 frontmatter 控制
+- 🐛 修复视图关闭时报错问题
+- 🐛 修复查词窗口多余颜色条
+- 🐛 修复 workspace.json 孤儿 leaf 污染
+
 #### 1.1.0 (2026-08-24)
 - ⚖️ 新增「数据来源与免责声明」区块
 - 🗃️ 优化缓存策略设置展示
@@ -148,6 +156,7 @@ npm run build    # 构建生产版本
 
 ### 🙏 致谢
 
+- [有道词典](https://dict.youdao.com/) - 英汉/汉英词典数据源
 - [Free Dictionary API](https://dictionaryapi.dev/) - 免费词典数据源
 - [Obsidian](https://obsidian.md/) - 优秀的笔记应用
 - [SM-2 算法](https://www.supermemo.com/en/archives/ssm/sm2) - 间隔重复算法
@@ -289,6 +298,14 @@ npm run build    # Build for production
 
 ### 📝 Changelog
 
+#### 1.3.0 (2026-08-25)
+- 🔒 Privacy cleanup: Removed all debug logs to prevent data leakage
+- 🎨 Unified AI modal button styles with hover effects
+- 💡 Simplified highlight control logic, removed per-note frontmatter
+- 🐛 Fixed errors when closing views
+- 🐛 Fixed unwanted color bar in lookup popup
+- 🐛 Fixed workspace.json orphan leaf pollution
+
 #### 1.1.0 (2026-08-24)
 - ⚖️ Added "Data Sources & Disclaimer" section
 - 🗃️ Improved cache strategy settings UI
@@ -311,6 +328,7 @@ npm run build    # Build for production
 
 ### 🙏 Acknowledgements
 
+- [Youdao Dictionary](https://dict.youdao.com/) - English-Chinese dictionary data source
 - [Free Dictionary API](https://dictionaryapi.dev/) - Free dictionary data source
 - [Obsidian](https://obsidian.md/) - The excellent note-taking app
 - [SM-2 Algorithm](https://www.supermemo.com/en/archives/ssm/sm2) - Spaced repetition algorithm
@@ -332,68 +350,6 @@ This is an open-source project licensed under the MIT License.
 
 ---
 
-## 🔧 开发指南 / Development
-
-### 项目结构 / Project Structure
-
-```
-fleurdict/
-├── src/
-│   ├── main.ts                    # 插件主入口 / Plugin entry
-│   ├── types.ts                   # 类型定义 / Type definitions
-│   ├── settings.ts                # 设置面板 / Settings panel
-│   ├── core/                      # 核心模块 / Core modules
-│   │   ├── dictionary-engine.ts   # 词典引擎 / Dictionary engine
-│   │   ├── online-dict.ts         # 在线词典 / Online dictionary
-│   │   ├── local-dict.ts          # 本地词典 / Local dictionary
-│   │   ├── llm-service.ts         # AI 服务 / AI service
-│   │   ├── wordbook-manager.ts    # 生词本管理 / Wordbook manager
-│   │   └── flashcard-engine.ts    # 闪卡引擎 / Flashcard engine
-│   ├── ui/                        # UI 组件 / UI components
-│   │   ├── dict-popup.ts          # 词典弹窗 / Dictionary popup
-│   │   ├── ai-modal.ts            # AI 弹窗 / AI modal
-│   │   ├── ai-sidebar.ts          # AI 侧栏 / AI sidebar
-│   │   ├── flashcard-modal.ts     # 闪卡弹窗 / Flashcard modal
-│   │   └── wordbook-view.ts       # 生词本视图 / Wordbook view
-│   └── features/                  # 功能模块 / Features
-│       ├── selection-handler.ts   # 划词处理 / Selection handler
-│       ├── context-menu.ts        # 右键菜单 / Context menu
-│       └── commands.ts            # 命令注册 / Command registration
-├── styles.css                     # 样式文件 / Styles
-├── manifest.json                  # 插件清单 / Plugin manifest
-└── package.json                   # 项目配置 / Project config
-```
-
-### 开发命令 / Development Commands
-
-```bash
-npm install         # 安装依赖 / Install dependencies
-npm run dev         # 开发模式 / Development mode (hot reload)
-npm run build       # 构建生产版本 / Build for production
-npm run check       # 类型检查 / Type check
-```
-
-### 贡献指南 / Contributing
-
-欢迎提交 Issue 和 Pull Request！ / Issues and Pull Requests are welcome!
-
-1. Fork 本仓库 / Fork this repository
-2. 创建功能分支 / Create feature branch: `git checkout -b feature/your-feature`
-3. 提交更改 / Commit: `git commit -m 'Add some feature'`
-4. 推送分支 / Push: `git push origin feature/your-feature`
-5. 创建 Pull Request / Create a Pull Request
-
----
-
 ## 📄 许可证 / License
 
 MIT License
-
-## 📮 联系方式 / Contact
-
-- GitHub: [@gibsonchan5](https://github.com/gibsonchan5)
-- Issues: [提交问题 / Submit issues](https://github.com/gibsonchan5/fleurdict/issues)
-
----
-
-**Made with ❤️ for Obsidian community**
