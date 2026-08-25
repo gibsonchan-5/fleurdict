@@ -30,7 +30,7 @@ export class FleurDictSettingTab extends PluginSettingTab {
     // Section 1: Dictionary Sources
     // =========================================================================
     const dictSection = containerEl.createDiv('fleurdict-settings-section');
-    dictSection.createEl('h3', { text: '词典源设置', cls: 'fleurdict-settings-title' });
+    new Setting(dictSection).setName('词典源设置').setHeading();
 
     dictSection.createEl('p', {
       text: '查词引擎优先使用有道词典（免费、无需配置，中文释义），无结果时自动切换英文词典。',
@@ -69,10 +69,7 @@ export class FleurDictSettingTab extends PluginSettingTab {
       );
 
     // --- 缓存策略 ---
-    dictSection.createEl('h4', {
-      text: '缓存策略',
-      cls: 'fleurdict-settings-subtitle',
-    });
+    new Setting(dictSection).setName('缓存策略').setHeading();
 
     new Setting(dictSection)
       .setName('启用在线查询缓存')
@@ -119,7 +116,7 @@ export class FleurDictSettingTab extends PluginSettingTab {
     // Section 2: Eudic Sync (欧路词典同步)
     // =========================================================================
     const eudicSection = containerEl.createDiv('fleurdict-settings-section');
-    eudicSection.createEl('h3', { text: '欧路词典同步', cls: 'fleurdict-settings-title' });
+    new Setting(eudicSection).setName('欧路词典同步').setHeading();
 
     eudicSection.createEl('p', {
       text: '将 Obsidian 生词本与欧路词典 App 双向同步。获取 Token：欧路词典官网 → 个人中心 → 开放 API。',
@@ -270,7 +267,7 @@ export class FleurDictSettingTab extends PluginSettingTab {
     // Section 3: AI Settings
     // =========================================================================
     const aiSection = containerEl.createDiv('fleurdict-settings-section');
-    aiSection.createEl('h3', { text: 'AI 设置', cls: 'fleurdict-settings-title' });
+    new Setting(aiSection).setName('AI 设置').setHeading();
 
     new Setting(aiSection)
       .setName('AI Provider')
@@ -406,7 +403,7 @@ export class FleurDictSettingTab extends PluginSettingTab {
     // Section 4: Wordbook Settings
     // =========================================================================
     const wbSection = containerEl.createDiv('fleurdict-settings-section');
-    wbSection.createEl('h3', { text: '生词本设置', cls: 'fleurdict-settings-title' });
+    new Setting(wbSection).setName('生词本设置').setHeading();
 
     new Setting(wbSection)
       .setName('自动提示加入生词本')
@@ -475,7 +472,7 @@ export class FleurDictSettingTab extends PluginSettingTab {
     // Section 5: Flashcard Settings
     // =========================================================================
     const fcSection = containerEl.createDiv('fleurdict-settings-section');
-    fcSection.createEl('h3', { text: '闪卡设置', cls: 'fleurdict-settings-title' });
+    new Setting(fcSection).setName('闪卡设置').setHeading();
 
     new Setting(fcSection)
       .setName('每日新卡上限')
@@ -537,7 +534,7 @@ export class FleurDictSettingTab extends PluginSettingTab {
     // Section 6: Appearance & Shortcuts
     // =========================================================================
     const uiSection = containerEl.createDiv('fleurdict-settings-section');
-    uiSection.createEl('h3', { text: '外观与快捷键', cls: 'fleurdict-settings-title' });
+    new Setting(uiSection).setName('外观与快捷键').setHeading();
 
     new Setting(uiSection)
       .setName('弹窗位置')
@@ -645,7 +642,7 @@ export class FleurDictSettingTab extends PluginSettingTab {
     // Section 6.5: Highlight Control
     // =========================================================================
     const highlightSection = containerEl.createDiv('fleurdict-settings-section');
-    highlightSection.createEl('h3', { text: '生词高亮控制', cls: 'fleurdict-settings-title' });
+    new Setting(highlightSection).setName('生词高亮控制').setHeading();
 
     highlightSection.createEl('p', {
       text: '全局开关：关闭后所有笔记（编辑模式与阅读模式）都不再高亮生词，不影响生词本数据。',
@@ -674,9 +671,7 @@ export class FleurDictSettingTab extends PluginSettingTab {
     // 数据来源与免责声明（放在最末尾）
     // =========================================================================
     const disclaimerContainer = containerEl.createDiv('fleurdict-disclaimer');
-    disclaimerContainer.createEl('h3', {
-      text: '数据来源与免责声明',
-    });
+    new Setting(disclaimerContainer).setName('数据来源与免责声明').setHeading();
 
     const disclaimerText = disclaimerContainer.createEl('div', {
       cls: 'fleurdict-disclaimer-text',

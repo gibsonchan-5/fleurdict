@@ -6,6 +6,7 @@
 import { App, Modal, Plugin } from 'obsidian';
 import { LLMService, ChatMessage } from '../core/llm-service';
 import { FleurDictSettings } from '../types';
+import { sanitizeHTML } from '../utils/helpers';
 
 /**
  * AI Modal - displays AI-generated content with streaming support.
@@ -99,102 +100,46 @@ export class AIModal extends Modal {
     modalEl.style.transform = `translate(${this.translateX}px, ${this.translateY}px)`;
     modalEl.style.willChange = 'transform';
 
-    // Title bar (draggable handle)
+    // Title bar (draggable handle) — static styles via CSS class
     contentEl.empty();
     const titleBar = contentEl.createDiv('fleurdict-ai-title-bar');
-    titleBar.style.display = 'flex';
-    titleBar.style.alignItems = 'center';
-    titleBar.style.justifyContent = 'space-between';
-    titleBar.style.marginBottom = '12px';
-    titleBar.style.cursor = 'grab';
-    titleBar.style.userSelect = 'none';
+    // cursor: grab and userSelect: none are dynamic (change to grabbing during drag)
 
     const titleLabel = titleBar.createEl('span', { text: this.title });
-    titleLabel.style.fontSize = '13px';
-    titleLabel.style.fontWeight = '600';
-    titleLabel.style.color = 'var(--text-muted)';
-    titleLabel.style.letterSpacing = '0.02em';
+    titleLabel.addClass('fleurdict-ai-title-label');
 
     // Content area — fill remaining space
     this.contentEl = contentEl.createDiv('fleurdict-ai-content');
-    this.contentEl.style.flex = '1';
-    this.contentEl.style.minHeight = '100px';
-    this.contentEl.style.overflow = 'auto';
-    this.contentEl.style.padding = '16px';
-    this.contentEl.style.backgroundColor = 'var(--background-secondary)';
-    this.contentEl.style.borderRadius = '8px';
-    this.contentEl.style.lineHeight = '1.6';
-    this.contentEl.style.fontSize = '14px';
-    this.contentEl.style.display = 'flex';
-    this.contentEl.style.flexDirection = 'column';
 
     // Make the modal body a flex column
-    modalEl.style.display = 'flex';
-    modalEl.style.flexDirection = 'column';
-    contentEl.style.display = 'flex';
-    contentEl.style.flexDirection = 'column';
-    contentEl.style.flex = '1';
-    contentEl.style.overflow = 'hidden';
+    modalEl.addClass('fleurdict-ai-modal-body');
+    contentEl.addClass('fleurdict-ai-modal-content');
 
     // Resize handle (bottom-right corner)
     const resizeHandle = contentEl.createDiv('fleurdict-ai-resize-handle');
-    resizeHandle.style.position = 'absolute';
-    resizeHandle.style.bottom = '0';
-    resizeHandle.style.right = '0';
-    resizeHandle.style.width = '18px';
-    resizeHandle.style.height = '18px';
-    resizeHandle.style.cursor = 'nwse-resize';
-    resizeHandle.style.zIndex = '10';
 
     // SVG corner indicator
     resizeHandle.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 14V10H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M12 14V6H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
-    resizeHandle.style.color = 'var(--text-faint)';
-    resizeHandle.style.opacity = '0.4';
-    resizeHandle.style.transition = 'opacity 0.15s';
-    resizeHandle.addEventListener('mouseenter', () => { resizeHandle.style.opacity = '0.8'; });
-    resizeHandle.addEventListener('mouseleave', () => { resizeHandle.style.opacity = '0.4'; });
 
     // Show original text if provided (direct child of contentEl, above render area)
     if (this.originalText) {
       const originalEl = this.contentEl.createDiv('fleurdict-ai-original-text');
-      originalEl.style.cssText = `
-        padding: 10px 14px;
-        margin-bottom: 10px;
-        background: var(--background-primary);
-        border-left: 3px solid var(--interactive-accent, teal);
-        border-radius: 6px;
-        font-style: italic;
-        color: var(--text-muted);
-        font-size: 13px;
-        line-height: 1.6;
-        flex-shrink: 0;
-      `;
       const label = originalEl.createSpan();
       label.textContent = '原文：';
-      label.style.cssText = 'font-weight: 600; color: var(--text-secondary); font-style: normal;';
+      label.addClass('fleurdict-ai-original-label');
       const textSpan = originalEl.createSpan();
       textSpan.textContent = this.originalText;
     }
 
     // Dedicated render area for AI streaming output (innerHTML replaces safely here)
     this.renderAreaEl = this.contentEl.createDiv('fleurdict-ai-render-area');
-    this.renderAreaEl.style.flex = '1';
-    this.renderAreaEl.style.minHeight = '0';
-    this.renderAreaEl.style.overflow = 'auto';
 
     // Loading indicator
     const loadingEl = this.renderAreaEl.createDiv('fleurdict-ai-loading');
     loadingEl.setText('AI 正在思考...');
-    loadingEl.style.color = 'var(--text-muted)';
-    loadingEl.style.fontStyle = 'italic';
 
     // Button container
     const buttonContainer = contentEl.createDiv('fleurdict-ai-buttons');
-    buttonContainer.style.marginTop = '16px';
-    buttonContainer.style.display = 'flex';
-    buttonContainer.style.justifyContent = 'flex-end';
-    buttonContainer.style.gap = '8px';
-    buttonContainer.style.flexShrink = '0';
 
     // Copy button
     this.copyButton = buttonContainer.createEl('button', { text: '复制' });
@@ -358,7 +303,7 @@ export class AIModal extends Modal {
       (error) => {
         // Error occurred
         loadingEl.setText(`错误：${error.message}`);
-        loadingEl.style.color = 'var(--text-error)';
+        loadingEl.addClass('fleurdict-ai-error-text');
         console.error('FleurDict: AI streaming error:', error);
       }
     );
@@ -378,7 +323,7 @@ export class AIModal extends Modal {
       // Horizontal rule
       if (/^---+$/.test(line.trim())) {
         if (inList) { htmlLines.push('</ul>'); inList = false; }
-        htmlLines.push('<hr style="margin:12px 0;border:none;border-top:1px solid var(--border-subtle)">');
+        htmlLines.push('<hr class="fleurdict-ai-hr">');
         continue;
       }
 
@@ -386,7 +331,7 @@ export class AIModal extends Modal {
       const h4 = line.match(/^####\s+(.+)$/);
       if (h4) {
         if (inList) { htmlLines.push('</ul>'); inList = false; }
-        htmlLines.push(`<h5 style="margin:12px 0 6px;font-size:14px;font-weight:600">${this.inlineMarkdown(h4[1])}</h5>`);
+        htmlLines.push(`<h5 class="fleurdict-ai-h4">${this.inlineMarkdown(h4[1])}</h5>`);
         continue;
       }
 
@@ -394,7 +339,7 @@ export class AIModal extends Modal {
       const h3 = line.match(/^###\s+(.+)$/);
       if (h3) {
         if (inList) { htmlLines.push('</ul>'); inList = false; }
-        htmlLines.push(`<h4 style="margin:14px 0 6px;font-size:15px;font-weight:600">${this.inlineMarkdown(h3[1])}</h4>`);
+        htmlLines.push(`<h4 class="fleurdict-ai-h3">${this.inlineMarkdown(h3[1])}</h4>`);
         continue;
       }
 
@@ -402,7 +347,7 @@ export class AIModal extends Modal {
       const h2 = line.match(/^##\s+(.+)$/);
       if (h2) {
         if (inList) { htmlLines.push('</ul>'); inList = false; }
-        htmlLines.push(`<h3 style="margin:16px 0 8px;font-size:16px;font-weight:700">${this.inlineMarkdown(h2[1])}</h3>`);
+        htmlLines.push(`<h3 class="fleurdict-ai-h2">${this.inlineMarkdown(h2[1])}</h3>`);
         continue;
       }
 
@@ -410,29 +355,29 @@ export class AIModal extends Modal {
       const h1 = line.match(/^#\s+(.+)$/);
       if (h1) {
         if (inList) { htmlLines.push('</ul>'); inList = false; }
-        htmlLines.push(`<h2 style="margin:18px 0 10px;font-size:18px;font-weight:700">${this.inlineMarkdown(h1[1])}</h2>`);
+        htmlLines.push(`<h2 class="fleurdict-ai-h1">${this.inlineMarkdown(h1[1])}</h2>`);
         continue;
       }
 
       // Unordered list item: - text or * text
       const li = line.match(/^[\-\*]\s+(.+)$/);
       if (li) {
-        if (!inList) { htmlLines.push('<ul style="margin:4px 0;padding-left:20px;list-style:disc">'); inList = true; }
-        htmlLines.push(`<li style="margin:2px 0">${this.inlineMarkdown(li[1])}</li>`);
+        if (!inList) { htmlLines.push('<ul class="fleurdict-ai-ul">'); inList = true; }
+        htmlLines.push(`<li class="fleurdict-ai-li">${this.inlineMarkdown(li[1])}</li>`);
         continue;
       }
 
       // Ordered list item: 1. text
       const oli = line.match(/^\d+\.\s+(.+)$/);
       if (oli) {
-        htmlLines.push(`<p style="margin:4px 0;padding-left:24px;line-height:1.7">${this.inlineMarkdown(oli[1])}</p>`);
+        htmlLines.push(`<p class="fleurdict-ai-oli">${this.inlineMarkdown(oli[1])}</p>`);
         continue;
       }
 
       // Blockquote: > text
       const bq = line.match(/^>\s*(.+)$/);
       if (bq) {
-        htmlLines.push(`<div style="margin:8px 0;padding:8px 14px;border-left:3px solid var(--interactive-accent,teal);background:var(--background-secondary,rgba(0,0,0,0.03));border-radius:0 6px 6px 0;font-style:italic;color:var(--text-muted)">${this.inlineMarkdown(bq[1])}</div>`);
+        htmlLines.push(`<div class="fleurdict-ai-bq">${this.inlineMarkdown(bq[1])}</div>`);
         continue;
       }
 
@@ -445,16 +390,16 @@ export class AIModal extends Modal {
         }
         // Data row
         if (!inTable) {
-          htmlLines.push('<table style="width:100%;border-collapse:collapse;margin:8px 0;font-size:13px">');
+          htmlLines.push('<table class="fleurdict-ai-table">');
           inTable = true;
           inTableHead = true;
         }
         const cells = line.split('|').slice(1, -1).map(c => c.trim());
         if (inTableHead) {
-          htmlLines.push('<thead><tr>' + cells.map(c => `<th style="border:1px solid var(--border-subtle,rgba(0,0,0,0.1));padding:6px 10px;text-align:left;font-weight:600;background:var(--background-secondary,rgba(0,0,0,0.04))">${this.inlineMarkdown(c)}</th>`).join('') + '</tr></thead><tbody>');
+          htmlLines.push('<thead><tr>' + cells.map(c => `<th class="fleurdict-ai-th">${this.inlineMarkdown(c)}</th>`).join('') + '</tr></thead><tbody>');
           inTableHead = false;
         } else {
-          htmlLines.push('<tr>' + cells.map(c => `<td style="border:1px solid var(--border-subtle,rgba(0,0,0,0.1));padding:6px 10px">${this.inlineMarkdown(c)}</td>`).join('') + '</tr>');
+          htmlLines.push('<tr>' + cells.map(c => `<td class="fleurdict-ai-td">${this.inlineMarkdown(c)}</td>`).join('') + '</tr>');
         }
         continue;
       }
@@ -475,12 +420,12 @@ export class AIModal extends Modal {
 
       // Regular paragraph
       if (inList) { htmlLines.push('</ul>'); inList = false; }
-      htmlLines.push(`<p style="margin:6px 0;line-height:1.7">${this.inlineMarkdown(line)}</p>`);
+      htmlLines.push(`<p class="fleurdict-ai-p">${this.inlineMarkdown(line)}</p>`);
     }
 
     if (inList) { htmlLines.push('</ul>'); }
     if (inTable) { htmlLines.push('</tbody></table>'); }
-    this.renderAreaEl.innerHTML = htmlLines.join('');
+    this.renderAreaEl.innerHTML = sanitizeHTML(htmlLines.join(''));
   }
 
   /**
@@ -493,9 +438,9 @@ export class AIModal extends Modal {
       // *italic* (but not **bold**)
       .replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>')
       // [text](url) links
-      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color:var(--interactive-accent,teal)">$1</a>')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="fleurdict-ai-link">$1</a>')
       // `inline code`
-      .replace(/`([^`]+)`/g, '<code style="background:var(--background-modifier-cover);padding:2px 5px;border-radius:4px;font-size:13px">$1</code>')
+      .replace(/`([^`]+)`/g, '<code class="fleurdict-ai-code">$1</code>')
       ;
   }
 

@@ -96,8 +96,6 @@ export class DictPopup {
     const header = this.container.querySelector('.fleurdict-header-top') as HTMLElement;
     if (!header) return;
 
-    header.style.cursor = 'move';
-
     header.addEventListener('mousedown', (e) => {
       // Don't start drag if clicking close button
       if ((e.target as HTMLElement).closest('.fleurdict-close-btn')) return;
