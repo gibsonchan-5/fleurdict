@@ -141,28 +141,15 @@ export class FlashcardModal extends Modal {
 
       // Play audio button (always show on front)
       const playBtn = audioRowEl.createEl('button', { cls: 'fleurdict-flashcard-play-btn' });
-      const playSvg = playBtn.createSvg('svg');
-      playSvg.setAttribute('width', '16');
-      playSvg.setAttribute('height', '16');
-      playSvg.setAttribute('viewBox', '0 0 24 24');
-      playSvg.setAttribute('fill', 'none');
-      playSvg.setAttribute('stroke', 'currentColor');
-      playSvg.setAttribute('stroke-width', '2');
-      playSvg.setAttribute('stroke-linecap', 'round');
-      playSvg.setAttribute('stroke-linejoin', 'round');
-      const playPoly = playSvg.createSvg('polygon');
-      playPoly.setAttribute('points', '11 5 6 9 2 9 2 15 6 15 11 19 11 5');
-      const playPath1 = playSvg.createSvg('path');
-      playPath1.setAttribute('d', 'M15.54 8.46a5 5 0 0 1 0 7.07');
-      const playPath2 = playSvg.createSvg('path');
-      playPath2.setAttribute('d', 'M19.07 4.93a10 10 0 0 1 0 14.14');
+      playBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>`;
       const accent = this.settings.audioPreference === 'us' ? '美' : '英';
       playBtn.title = `播放${accent}式发音`;
       playBtn.addEventListener('click', () => {
         this.playCardAudio();
       });
 
-      if (this.currentCard.context) {
+      // 上下文：只有当内容与单词本身不同时才显示
+      if (this.currentCard.context && this.currentCard.context.trim().toLowerCase() !== this.currentCard.word.toLowerCase()) {
         frontEl.createEl('div', {
           text: this.currentCard.context,
           cls: 'fleurdict-flashcard-context',

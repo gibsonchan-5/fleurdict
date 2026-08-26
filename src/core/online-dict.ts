@@ -12,13 +12,16 @@ import { requestUrl } from 'obsidian';
 async function httpGet(url: string): Promise<{ status: number; json: any }> {
   try {
     const resp = await requestUrl({ url, method: 'GET' });
+    console.log('[FleurDict-DIAG] requestUrl status:', resp.status);
     return { status: resp.status, json: resp.json };
   } catch (reqErr: any) {
+    console.warn('[FleurDict-DIAG] requestUrl failed, trying fetch:', reqErr?.message || reqErr);
     try {
       const resp = await fetch(url);
       const json = await resp.json();
       return { status: resp.status, json };
     } catch (fetchErr: any) {
+      console.error('[FleurDict-DIAG] Both requestUrl and fetch failed');
       throw reqErr;
     }
   }
@@ -42,14 +45,24 @@ export class YoudaoDictionaryAPI implements OnlineDictionarySource {
     try {
       const dictsParam = encodeURIComponent(JSON.stringify({ count: 99, dicts: [['ec']] }));
       const url = `https://dict.youdao.com/jsonapi?q=${encodeURIComponent(word)}&dicts=${dictsParam}`;
+      console.log('[FleurDict-DIAG] Youdao request URL:', url);
 
       // Use httpGet (fetch primary, requestUrl fallback)
       const response = await httpGet(url);
+      console.log('[FleurDict-DIAG] Youdao response status:', response.status);
+      console.log('[FleurDict-DIAG] Youdao response keys:', Object.keys(response.json || {}));
+      console.log('[FleurDict-DIAG] ec exists:', !!response.json?.ec);
+      console.log('[FleurDict-DIAG] ec.word count:', response.json?.ec?.word?.length ?? 0);
 
       const entries = this.parseYoudaoData(response.json, word);
+      console.log('[FleurDict-DIAG] Youdao parsed', entries.length, 'entries for', word);
+      if (entries.length > 0) {
+        console.log('[FleurDict-DIAG] First entry word:', entries[0].word);
+        console.log('[FleurDict-DIAG] First entry meanings count:', entries[0].meanings.length);
+      }
       return entries;
     } catch (error) {
-      console.error('FleurDict: YoudaoDictionaryAPI error:', error);
+      console.error('[FleurDict-DIAG] YoudaoDictionaryAPI error:', error);
       throw error;
     }
   }
@@ -60,10 +73,12 @@ export class YoudaoDictionaryAPI implements OnlineDictionarySource {
   private parseYoudaoData(data: any, word: string): DictionaryEntry[] {
     const ec = data?.ec;
     if (!ec || !ec.word || ec.word.length === 0) {
+      console.log('FleurDict: Youdao ec empty for', word, '- keys:', Object.keys(data || {}));
       return [];
     }
 
     const wordData = ec.word[0];
+    console.log('FleurDict: Youdao wordData keys:', Object.keys(wordData));
 
     const entries: DictionaryEntry[] = [];
 
@@ -88,22 +103,18 @@ export class YoudaoDictionaryAPI implements OnlineDictionarySource {
       });
     }
     
-    // No fallback audio push when there is no phonetic text — otherwise the popup
-    // would render an empty colored badge. Audio playback is still available via
-    // the dict-popup's own audio fallback when a phonetic with text is present.
-
-    // Filter out any phonetic that has no displayable IPA text after stripping the "英"/"美" prefix.
-    // This is the second line of defense against empty badges.
-    const validPhonetics = phonetics.filter((p) => {
-      if (!p.text) return false;
-      const ipa = p.text.replace(/^[英美]\s*/, '').trim();
-      return ipa.length > 0;
-    });
-    phonetics.length = 0;
-    phonetics.push(...validPhonetics);
+    // Fallback: if no phonetic data but word exists, try generic audio
+    if (!wordData.ukphone && !wordData.usphone && word) {
+      phonetics.push({
+        text: '',
+        audio: `https://dict.youdao.com/dictvoice?audio=${word}&type=1`,
+      });
+    }
 
     // Parse Chinese definitions grouped by part of speech
     const posMap = new Map<string, DictionaryEntry['meanings'][0]>();
+
+    console.log('[FleurDict-DIAG] Parsing trs, count:', wordData.trs?.length ?? 0);
 
     if (wordData.trs && Array.isArray(wordData.trs)) {
       for (const trOuter of wordData.trs) {
@@ -124,6 +135,8 @@ export class YoudaoDictionaryAPI implements OnlineDictionarySource {
           } else {
             continue;
           }
+
+          console.log('[FleurDict-DIAG] Parsed definition:', fullDef.substring(0, 60));
 
           // Parse "n. 释义内容" or "v. 释义内容"
           const posMatch = fullDef.match(/^([a-z]+\.)\s*(.+)$/i);
@@ -160,6 +173,7 @@ export class YoudaoDictionaryAPI implements OnlineDictionarySource {
     }
 
     const meanings = Array.from(posMap.values());
+    console.log('[FleurDict-DIAG] Meanings built:', meanings.length, 'from posMap size:', posMap.size);
 
     // Build the entry
     // return-phrase can be a string ("appointment") or an object ({l: {i: "appointment"}})

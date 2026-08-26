@@ -117,65 +117,92 @@ export class FlashcardEngine {
   }
 
   /**
-   * Rate the current card and update its proficiency level
+   * Rate the current card and update its proficiency + schedule
    */
   rateCard(rating: FlashcardRating): void {
     const card = this.getCurrentCard();
     if (!card) return;
 
-    // Update review timestamp and count
     card.lastReviewed = now();
     card.reviewCount++;
 
-    // Apply proficiency-based algorithm
+    // Initialize missing fields for legacy entries
+    if (card.proficiency === undefined) card.proficiency = 0;
+    if (card.consecutiveCorrect === undefined) card.consecutiveCorrect = 0;
+
     if (rating === 1) {
-      // 陌生 (forgot): Reset proficiency to 0, reset consecutive correct
+      // 陌生: reset proficiency
       card.proficiency = 0;
       card.consecutiveCorrect = 0;
       card.easeFactor = Math.max(1.3, card.easeFactor - 0.2);
     } else if (rating === 2) {
-      // 渐熟 (learning): Increment consecutive correct
+      // 渐熟: increment consecutive, may promote to 渐熟
       card.consecutiveCorrect++;
-      
-      // Check if ready to upgrade to proficiency 1
       if (card.consecutiveCorrect >= 2) {
         card.proficiency = 1;
         card.consecutiveCorrect = 0;
-        card.easeFactor = Math.min(3.0, card.easeFactor + 0.1);
+        card.easeFactor = Math.min(3, card.easeFactor + 0.1);
       } else {
-        // Stay at proficiency 0, slight ease factor increase
-        card.easeFactor = Math.min(3.0, card.easeFactor + 0.05);
+        card.easeFactor = Math.min(3, card.easeFactor + 0.05);
       }
     } else if (rating === 3) {
-      // 熟悉 (known): Increment consecutive correct
+      // 熟悉: increment consecutive, may promote to 熟悉
       card.consecutiveCorrect++;
-      
-      // Check if ready to upgrade to proficiency 2
       if (card.proficiency === 0 && card.consecutiveCorrect >= 2) {
         card.proficiency = 2;
         card.consecutiveCorrect = 0;
-        card.easeFactor = Math.min(3.0, card.easeFactor + 0.2);
+        card.easeFactor = Math.min(3, card.easeFactor + 0.2);
       } else if (card.proficiency === 1 && card.consecutiveCorrect >= 3) {
         card.proficiency = 2;
         card.consecutiveCorrect = 0;
-        card.easeFactor = Math.min(3.0, card.easeFactor + 0.15);
+        card.easeFactor = Math.min(3, card.easeFactor + 0.15);
       } else {
-        // Stay at current proficiency, moderate ease factor increase
-        card.easeFactor = Math.min(3.0, card.easeFactor + 0.1);
+        card.easeFactor = Math.min(3, card.easeFactor + 0.1);
       }
     }
 
-    // Calculate interval based on proficiency level
+    // Schedule based on proficiency level
     if (card.proficiency === 0) {
-      card.interval = 1; // 1 day
+      card.interval = 1;
     } else if (card.proficiency === 1) {
-      card.interval = 3; // 3 days
+      card.interval = 3;
     } else if (card.proficiency === 2) {
-      card.interval = 7; // 7 days
+      card.interval = 7;
+    }
+    card.nextReview = now() + card.interval * 24 * 60 * 60 * 1000;
+  }
+
+  /**
+   * Calculate SM-2 schedule for next review (kept for compatibility)
+   */
+  static calculateSchedule(entry: WordEntry, rating: FlashcardRating): {
+    interval: number;
+    easeFactor: number;
+    nextReview: number;
+  } {
+    let interval = entry.interval;
+    let easeFactor = entry.easeFactor;
+
+    if (rating < 3) {
+      interval = 1;
+      easeFactor = Math.max(1.3, easeFactor - 0.2);
+    } else {
+      if (interval === 0) {
+        interval = 1;
+      } else if (interval === 1) {
+        interval = 6;
+      } else {
+        interval = Math.round(interval * easeFactor);
+      }
+      if (rating === 5) {
+        easeFactor += 0.1;
+      } else if (rating === 3) {
+        easeFactor = Math.max(1.3, easeFactor - 0.1);
+      }
     }
 
-    // Calculate next review time
-    card.nextReview = now() + card.interval * 24 * 60 * 60 * 1000;
+    const nextReview = now() + interval * 24 * 60 * 60 * 1000;
+    return { interval, easeFactor, nextReview };
   }
 
   /**

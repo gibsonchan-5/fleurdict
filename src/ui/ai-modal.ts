@@ -6,7 +6,7 @@
 import { App, Modal, Plugin } from 'obsidian';
 import { LLMService, ChatMessage } from '../core/llm-service';
 import { FleurDictSettings } from '../types';
-import { sanitizeHTML, setSafeHTML } from '../utils/helpers';
+import { sanitizeHTML } from '../utils/helpers';
 
 /**
  * AI Modal - displays AI-generated content with streaming support.
@@ -18,15 +18,10 @@ export class AIModal extends Modal {
   private llmService: LLMService;
   private messages: ChatMessage[];
   private title: string;
-  private originalText?: string;
   private plugin?: Plugin;
 
   private contentEl: HTMLElement;
-  private renderAreaEl: HTMLElement;
   private streamAbortController: AbortController | null = null;
-  private fullContent = '';
-  private copyButton?: HTMLButtonElement;
-  private saveButton?: HTMLButtonElement;
 
   // Drag & resize state
   private isDragging = false;
@@ -52,7 +47,6 @@ export class AIModal extends Modal {
     llmService: LLMService,
     messages: ChatMessage[],
     title: string,
-    originalText?: string,
     plugin?: Plugin
   ) {
     super(app);
@@ -60,7 +54,6 @@ export class AIModal extends Modal {
     this.llmService = llmService;
     this.messages = messages;
     this.title = title;
-    this.originalText = originalText;
     this.plugin = plugin;
   }
 
@@ -76,10 +69,8 @@ export class AIModal extends Modal {
 
     // Modal styling — remove Obsidian's centered constraints
     modalEl.addClass('fleurdict-ai-modal');
-    modalEl.setCssStyles({
-      width: `${w}px`,
-      height: `${h}px`
-    });
+    modalEl.style.width = `${w}px`;
+    modalEl.style.height = `${h}px`;
 
     // Restore saved position, or center on first open
     if (left !== undefined && top !== undefined) {
@@ -92,16 +83,14 @@ export class AIModal extends Modal {
       this.translateX = Math.round((vw - w) / 2);
       this.translateY = Math.round((vh - h) / 2);
     }
-    modalEl.setCssStyles({
-      left: '0px',
-      top: '0px',
-      transform: `translate(${this.translateX}px, ${this.translateY}px)`
-    });
+    modalEl.style.left = '0';
+    modalEl.style.top = '0';
+    modalEl.style.transform = `translate(${this.translateX}px, ${this.translateY}px)`;
+    modalEl.style.willChange = 'transform';
 
     // Title bar (draggable handle) — static styles via CSS class
     contentEl.empty();
     const titleBar = contentEl.createDiv('fleurdict-ai-title-bar');
-    // cursor: grab and userSelect: none are dynamic (change to grabbing during drag)
 
     const titleLabel = titleBar.createEl('span', { text: this.title });
     titleLabel.addClass('fleurdict-ai-title-label');
@@ -109,66 +98,30 @@ export class AIModal extends Modal {
     // Content area — fill remaining space
     this.contentEl = contentEl.createDiv('fleurdict-ai-content');
 
-    // Make the modal body a flex column
-    modalEl.addClass('fleurdict-ai-modal-body');
+    // Make the modal body a flex column — static styles via CSS class
     contentEl.addClass('fleurdict-ai-modal-content');
 
-    // Resize handle (bottom-right corner)
+    // Resize handle (bottom-right corner) — static styles via CSS class
     const resizeHandle = contentEl.createDiv('fleurdict-ai-resize-handle');
 
-    // SVG corner indicator (DOM API, no innerHTML)
-    const resizeSvg = resizeHandle.createSvg('svg');
-    resizeSvg.setAttribute('width', '16');
-    resizeSvg.setAttribute('height', '16');
-    resizeSvg.setAttribute('viewBox', '0 0 16 16');
-    resizeSvg.setAttribute('fill', 'none');
-    resizeSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-    const resizePath1 = resizeSvg.createSvg('path');
-    resizePath1.setAttribute('d', 'M10 14V10H14');
-    resizePath1.setAttribute('stroke', 'currentColor');
-    resizePath1.setAttribute('stroke-width', '1.5');
-    resizePath1.setAttribute('stroke-linecap', 'round');
-    const resizePath2 = resizeSvg.createSvg('path');
-    resizePath2.setAttribute('d', 'M12 14V6H14');
-    resizePath2.setAttribute('stroke', 'currentColor');
-    resizePath2.setAttribute('stroke-width', '1.5');
-    resizePath2.setAttribute('stroke-linecap', 'round');
+    // SVG corner indicator
+    resizeHandle.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 14V10H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M12 14V6H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
 
-    // Show original text if provided (direct child of contentEl, above render area)
-    if (this.originalText) {
-      const originalEl = this.contentEl.createDiv('fleurdict-ai-original-text');
-      const label = originalEl.createSpan();
-      label.textContent = '原文：';
-      label.addClass('fleurdict-ai-original-label');
-      const textSpan = originalEl.createSpan();
-      textSpan.textContent = this.originalText;
-    }
-
-    // Dedicated render area for AI streaming output (innerHTML replaces safely here)
-    this.renderAreaEl = this.contentEl.createDiv('fleurdict-ai-render-area');
-
-    // Loading indicator
-    const loadingEl = this.renderAreaEl.createDiv('fleurdict-ai-loading');
+    // Loading indicator — static styles via CSS class
+    const loadingEl = this.contentEl.createDiv('fleurdict-ai-loading');
     loadingEl.setText('AI 正在思考...');
 
-    // Button container
+    // Button container — static styles via existing CSS class
     const buttonContainer = contentEl.createDiv('fleurdict-ai-buttons');
 
     // Copy button
-    this.copyButton = buttonContainer.createEl('button', { text: '复制' });
-    this.copyButton.addClass('fleurdict-ai-btn');
-    this.copyButton.disabled = true;
-    this.copyButton.onclick = () => this.copyContent();
-
-    // Save to note button
-    this.saveButton = buttonContainer.createEl('button', { text: '写入笔记' });
-    this.saveButton.addClass('fleurdict-ai-btn');
-    this.saveButton.disabled = true;
-    this.saveButton.onclick = () => this.saveToNote();
+    const copyButton = buttonContainer.createEl('button', { text: '复制' });
+    copyButton.addClass('mod-cta');
+    copyButton.disabled = true;
+    copyButton.onclick = () => this.copyContent();
 
     // Close button
     const closeButton = buttonContainer.createEl('button', { text: '关闭' });
-    closeButton.addClass('fleurdict-ai-btn');
     closeButton.onclick = () => this.close();
 
     // === Drag to move (title bar) ===
@@ -181,10 +134,10 @@ export class AIModal extends Modal {
       // Record mouse position relative to modal's current transform origin
       this.dragOffsetX = e.clientX - this.translateX;
       this.dragOffsetY = e.clientY - this.translateY;
-      // Use CSS classes for cursor/user-select state
-      modalEl.addClass('is-dragging');
-      titleBar.addClass('is-dragging');
-      document.body.addClass('fleurdict-dragging');
+      modalEl.style.cursor = 'grabbing';
+      titleBar.style.cursor = 'grabbing';
+      // Prevent text selection during drag
+      document.body.style.userSelect = 'none';
       e.preventDefault();
     });
 
@@ -196,7 +149,7 @@ export class AIModal extends Modal {
       this.resizeStartH = modalEl.offsetHeight;
       this.resizeStartX = e.clientX;
       this.resizeStartY = e.clientY;
-      document.body.addClass('fleurdict-dragging');
+      document.body.style.userSelect = 'none';
       e.preventDefault();
       e.stopPropagation();
     });
@@ -217,28 +170,29 @@ export class AIModal extends Modal {
         this.translateY = Math.max(0, Math.min(vh - 60, this.translateY));
 
         // Apply transform (GPU-composited, no reflow)
-        modalEl.setCssStyles({ transform: `translate(${this.translateX}px, ${this.translateY}px)` });
+        modalEl.style.transform = `translate(${this.translateX}px, ${this.translateY}px)`;
       }
       if (this.isResizing) {
         const newW = Math.max(420, this.resizeStartW + (e.clientX - this.resizeStartX));
         const newH = Math.max(300, this.resizeStartH + (e.clientY - this.resizeStartY));
-        modalEl.setCssStyles({ width: `${newW}px`, height: `${newH}px` });
+        modalEl.style.width = `${newW}px`;
+        modalEl.style.height = `${newH}px`;
       }
     };
 
     const onGlobalMouseUp = () => {
       if (this.isDragging) {
         this.isDragging = false;
-        modalEl.removeClass('is-dragging');
-        titleBar.removeClass('is-dragging');
-        document.body.removeClass('fleurdict-dragging');
-        // Persist final position (fire-and-forget is fine here)
-        this.saveGeometry().catch(() => { /* save errors are non-critical */ });
+        modalEl.style.cursor = '';
+        titleBar.style.cursor = 'grab';
+        document.body.style.userSelect = '';
+        // Persist final position
+        this.saveGeometry();
       }
       if (this.isResizing) {
         this.isResizing = false;
         // Persist geometry
-        this.saveGeometry().catch(() => { /* save errors are non-critical */ });
+        this.saveGeometry();
       }
     };
 
@@ -246,7 +200,7 @@ export class AIModal extends Modal {
     document.addEventListener('mouseup', onGlobalMouseUp);
 
     // Start streaming
-    await this.startStreaming(loadingEl, this.copyButton, this.saveButton);
+    await this.startStreaming(loadingEl, copyButton);
   }
 
   /**
@@ -264,7 +218,7 @@ export class AIModal extends Modal {
   /**
    * Save current geometry to plugin data
    */
-  private async saveGeometry() {
+  private saveGeometry() {
     if (!this.plugin) return;
     const modalEl = this.modalEl;
     if (!modalEl) return;
@@ -279,19 +233,18 @@ export class AIModal extends Modal {
     geom.w = Math.max(380, Math.min(geom.w, window.innerWidth - 40));
     geom.h = Math.max(260, Math.min(geom.h, window.innerHeight - 40));
     try {
-      // Must merge with existing data.json, otherwise wordbook data would be overwritten.
-      const data = (await this.plugin.loadData()) || {};
-      if (!data.settings) data.settings = {};
-      data.settings._aiModalGeometry = geom;
-      await this.plugin.saveData(data);
+      const pluginAny = this.plugin as any;
+      if (!pluginAny.settings) pluginAny.settings = {};
+      pluginAny.settings._aiModalGeometry = geom;
+      pluginAny.saveData(Object.assign({}, pluginAny.settings));
     } catch { /* ignore save errors */ }
   }
 
   /**
    * Start streaming AI response
    */
-  private async startStreaming(loadingEl: HTMLElement, copyButton?: HTMLButtonElement, saveButton?: HTMLButtonElement) {
-    this.fullContent = '';
+  private async startStreaming(loadingEl: HTMLElement, copyButton: HTMLButtonElement) {
+    let fullContent = '';
 
     this.streamAbortController = await this.llmService.sendMessageStream(
       this.messages,
@@ -302,15 +255,13 @@ export class AIModal extends Modal {
         }
 
         if (chunk.content) {
-          this.fullContent += chunk.content;
-          this.renderContent(this.fullContent);
+          fullContent += chunk.content;
+          this.renderContent(fullContent);
         }
       },
       () => {
         // Streaming complete
-        const hasContent = !!this.fullContent;
-        if (copyButton) copyButton.disabled = !hasContent;
-        if (saveButton) saveButton.disabled = !hasContent;
+        copyButton.disabled = !fullContent;
       },
       (error) => {
         // Error occurred
@@ -437,7 +388,10 @@ export class AIModal extends Modal {
 
     if (inList) { htmlLines.push('</ul>'); }
     if (inTable) { htmlLines.push('</tbody></table>'); }
-    setSafeHTML(this.renderAreaEl, sanitizeHTML(htmlLines.join('')));
+    
+    // Sanitize HTML to prevent XSS attacks
+    const safeHtml = sanitizeHTML(htmlLines.join(''));
+    this.contentEl.innerHTML = safeHtml;
   }
 
   /**
@@ -465,9 +419,9 @@ export class AIModal extends Modal {
       await navigator.clipboard.writeText(text);
 
       // Show feedback
-      const copyButton = this.copyButton;
+      const originalText = this.contentEl.parentElement?.querySelector('button')?.textContent;
+      const copyButton = this.contentEl.parentElement?.querySelector('button');
       if (copyButton) {
-        const originalText = copyButton.textContent;
         copyButton.textContent = '已复制！';
         setTimeout(() => {
           if (copyButton) copyButton.textContent = originalText || '复制';
@@ -475,61 +429,6 @@ export class AIModal extends Modal {
       }
     } catch (error) {
       console.error('FleurDict: Failed to copy:', error);
-    }
-  }
-
-  /**
-   * Save AI response to a note in FleurDict folder
-   */
-  private async saveToNote() {
-    const app = this.app;
-    const vault = app.vault;
-
-    // Build markdown content
-    const lines: string[] = [];
-    lines.push(`# ${this.title}`);
-    lines.push('');
-    if (this.originalText) {
-      lines.push(`> ${this.originalText}`);
-      lines.push('');
-    }
-    lines.push('---');
-    lines.push('');
-    // Use the streamed content
-    if (this.fullContent) {
-      lines.push(this.fullContent);
-    } else {
-      // Fallback: use rendered text
-      lines.push(this.renderAreaEl?.innerText || this.contentEl?.innerText || '');
-    }
-    lines.push('');
-
-    const md = lines.join('\n');
-
-    try {
-      // Ensure FleurDict folder exists
-      const folder = 'FleurDict';
-      if (!vault.getAbstractFileByPath(folder)) {
-        await vault.createFolder(folder);
-      }
-
-      // Generate filename: use first few words of original text or title
-      const safeTitle = (this.originalText || this.title)
-        .replace(/[^a-zA-Z0-9\u4e00-\u9fff\s-]/g, '')
-        .replace(/\s+/g, '_')
-        .substring(0, 50)
-        .trim() || 'ai-response';
-
-      const now = new Date();
-      const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}-${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
-      const fileName = `${folder}/${safeTitle}-${dateStr}.md`;
-
-      const file = await vault.create(fileName, md);
-      const leaf = app.workspace.getLeaf('tab');
-      await leaf.openFile(file);
-      new Notice(`✓ 已写入笔记：${fileName}`);
-    } catch (e: any) {
-      new Notice(`写入笔记失败：${e.message}`);
     }
   }
 
@@ -559,7 +458,7 @@ export async function showAITranslation(
   const { buildAITranslatePrompt } = await import('../core/llm-service');
   const messages = buildAITranslatePrompt(text, context);
 
-  const modal = new AIModal(app, settings, llmService, messages, 'AI 翻译', text, plugin);
+  const modal = new AIModal(app, settings, llmService, messages, 'AI 翻译', plugin);
   modal.open();
 }
 
@@ -577,6 +476,6 @@ export async function showAIDetail(
   const { buildAIDetailPrompt } = await import('../core/llm-service');
   const messages = buildAIDetailPrompt(word, context);
 
-  const modal = new AIModal(app, settings, llmService, messages, 'AI 详解', word, plugin);
+  const modal = new AIModal(app, settings, llmService, messages, `AI 详解：${word}`, plugin);
   modal.open();
 }

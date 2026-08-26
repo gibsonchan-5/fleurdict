@@ -38,6 +38,15 @@ export class ReadingModeHandler {
   }
 
   register(): void {
+    // 注册 Markdown 后处理器，在预览模式渲染时直接对 el 应用高亮
+    this.plugin.registerMarkdownPostProcessor((el, ctx) => {
+      // el 就是刚渲染完的 markdown-preview-view 容器
+      // 直接对它应用高亮，不依赖 view.getMode()
+      setTimeout(() => {
+        this.highlightPreviewContainer(el);
+      }, 30);
+    });
+
     // 双击查词（仅预览模式下）
     this.dblclickHandler = (evt: MouseEvent) => {
       const target = evt.target as HTMLElement;
@@ -203,15 +212,14 @@ export class ReadingModeHandler {
     });
   }
 
-  private highlightPreviewView(view: MarkdownView): void {
-    const container = view.containerEl;
-    if (!container) return;
+  /**
+   * 直接对 DOM 容器应用高亮（供 registerMarkdownPostProcessor 调用）
+   */
+  private highlightPreviewContainer(el: HTMLElement): void {
+    if (!el) return;
 
-    const previewEl = container.querySelector('.markdown-preview-view');
-    if (!previewEl) return;
-
-    // 移除旧高亮（无论开关状态，先清理已存在的高亮）
-    previewEl.querySelectorAll('.fleurdict-hl').forEach((span) => {
+    // 清理旧高亮
+    el.querySelectorAll('.fleurdict-hl').forEach((span) => {
       const parent = span.parentNode;
       if (parent) {
         parent.replaceChild(document.createTextNode(span.textContent || ''), span);
@@ -219,7 +227,7 @@ export class ReadingModeHandler {
       }
     });
 
-    // 全局开关：关闭时不高亮
+    // 全局开关
     const settings = (this.plugin as any).settings;
     if (!settings?.highlightEnabled) return;
 
@@ -227,21 +235,27 @@ export class ReadingModeHandler {
     const wordsToHighlight = allWords.filter(
       (w) => w.proficiency !== undefined && w.proficiency < 3
     );
-
     if (wordsToHighlight.length === 0) return;
 
-    const walker = document.createTreeWalker(previewEl, NodeFilter.SHOW_TEXT, null);
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
     const textNodes: Text[] = [];
     let node: Node | null;
     while ((node = walker.nextNode())) {
-      if (node.textContent?.trim()) {
-        textNodes.push(node as Text);
-      }
+      if (node.textContent?.trim()) textNodes.push(node as Text);
     }
-
     for (const textNode of textNodes) {
       this.highlightTextNode(textNode, wordsToHighlight);
     }
+  }
+
+  private highlightPreviewView(view: MarkdownView): void {
+    const container = view.containerEl;
+    if (!container) return;
+
+    const previewEl = container.querySelector('.markdown-preview-view');
+    if (!previewEl) return;
+
+    this.highlightPreviewContainer(previewEl);
   }
 
   private highlightTextNode(textNode: Text, words: WordEntry[]): void {
