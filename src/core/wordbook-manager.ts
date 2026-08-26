@@ -109,6 +109,8 @@ export class WordbookManager {
       nextReview: now(),
       easeFactor: this.settings.initialEaseFactor,
       interval: 0,
+      proficiency: 0,
+      consecutiveCorrect: 0,
     };
 
     if (type === 'word') {

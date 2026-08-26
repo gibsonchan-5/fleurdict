@@ -8,6 +8,7 @@ import { RangeSetBuilder, StateField, StateEffect } from '@codemirror/state';
 import type { Plugin } from 'obsidian';
 import type { WordbookManager } from '../core/wordbook-manager';
 import type { FleurDictSettings } from '../types';
+import type { SelectionHandler } from './selection-handler';
 
 // CSS classes for proficiency levels
 const PROFICIENCY_CLASSES = [
@@ -39,8 +40,13 @@ interface WordHighlightPlugin {
 /**
  * Create CM6 ViewPlugin for word highlighting.
  * Returns [refreshField, ViewPlugin] — both must be registered as editor extensions.
+ * Optional selectionHandler enables double-click-to-lookup in edit mode.
  */
-export function createWordHighlightPlugin(plugin: Plugin, wordbookManager: WordbookManager) {
+export function createWordHighlightPlugin(
+  plugin: Plugin,
+  wordbookManager: WordbookManager,
+  selectionHandler?: SelectionHandler
+) {
   const settings = (plugin as any).settings as FleurDictSettings;
 
   /**
@@ -51,23 +57,60 @@ export function createWordHighlightPlugin(plugin: Plugin, wordbookManager: Wordb
     return false;
   };
 
+  /**
+   * Extract the word at a CM6 document position.
+   */
+  function getWordAtPos(doc: { sliceString: (from: number, to: number) => string }, pos: number): string | null {
+    // Get a generous window around the position
+    const windowSize = 80;
+    const start = Math.max(0, pos - windowSize);
+    const end = Math.min(pos + windowSize, doc.length);
+    const text = doc.sliceString(start, end);
+    const localPos = pos - start;
+
+    const wordRegex = /[a-zA-Z'-]+/g;
+    let match;
+    while ((match = wordRegex.exec(text)) !== null) {
+      const wordStart = match.index;
+      const wordEnd = wordStart + match[0].length;
+      if (localPos >= wordStart && localPos <= wordEnd) {
+        return match[0];
+      }
+    }
+    return null;
+  }
+
   const highlightPlugin = ViewPlugin.fromClass(
     class implements WordHighlightPlugin {
       decorations: DecorationSet;
       private _dirty = true;
       private _refreshCount = 0;
+      private dblclickHandler: ((e: MouseEvent) => void) | null = null;
 
       constructor(private view: EditorView) {
         this.decorations = Decoration.none;
         this._dirty = true;
         this._refreshCount = 0;
         activeInstances.add(this);
+
+        // Register double-click handler for edit mode word lookup
+        if (selectionHandler) {
+          this.dblclickHandler = (e: MouseEvent) => {
+            const pos = this.view.posAtCoords({ x: e.clientX, y: e.clientY });
+            if (pos === null) return;
+
+            const word = getWordAtPos(this.view.state.doc, pos);
+            if (!word) return;
+
+            e.preventDefault();
+            selectionHandler.lookupWord(word);
+          };
+          this.view.dom.addEventListener('dblclick', this.dblclickHandler, true);
+        }
       }
 
       update(update: ViewUpdate) {
-        // Check StateField counter — changes when a refresh effect is dispatched
         const newCount = update.state.field(refreshField);
-        // Always rebuild on first call (_dirty=true) or when doc/viewport/effects change
         if (this._dirty || update.docChanged || update.viewportChanged || newCount !== this._refreshCount) {
           this._dirty = false;
           this._refreshCount = newCount;
@@ -84,6 +127,9 @@ export function createWordHighlightPlugin(plugin: Plugin, wordbookManager: Wordb
 
       destroy() {
         activeInstances.delete(this);
+        if (this.dblclickHandler) {
+          this.view.dom.removeEventListener('dblclick', this.dblclickHandler, true);
+        }
       }
 
       buildDecorations(): DecorationSet {
@@ -93,11 +139,12 @@ export function createWordHighlightPlugin(plugin: Plugin, wordbookManager: Wordb
         const allWords = wordbookManager.getAllEntries();
 
         // Filter words that need highlighting (proficiency 0, 1, 2)
+        // Treat undefined proficiency as 0 (new words from old data)
         const wordsByLength = allWords
-          .filter(w => w.proficiency !== undefined && w.proficiency < 3)
+          .filter(w => (w.proficiency ?? 0) < 3)
           .map(w => ({
             word: w.word,
-            cls: PROFICIENCY_CLASSES[w.proficiency] || PROFICIENCY_CLASSES[0],
+            cls: PROFICIENCY_CLASSES[w.proficiency ?? 0] || PROFICIENCY_CLASSES[0],
           }))
           .sort((a, b) => b.word.length - a.word.length); // longer words first to avoid overlap
 

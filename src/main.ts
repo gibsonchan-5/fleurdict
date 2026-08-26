@@ -86,7 +86,11 @@ export default class FleurDictPlugin extends Plugin {
     this.registerWorkspaceEvents();
 
     // Register CM6 editor extension for word highlighting in edit mode
-    const [refreshField, highlightPlugin] = createWordHighlightPlugin(this, this.wordbookManager);
+    const [refreshField, highlightPlugin] = createWordHighlightPlugin(
+      this,
+      this.wordbookManager,
+      this.selectionHandler
+    );
     this.registerEditorExtension([refreshField, highlightPlugin]);
 
     // Initialize reading mode handler for word highlighting in preview mode
@@ -114,10 +118,6 @@ export default class FleurDictPlugin extends Plugin {
 
     // Unregister event handlers
     this.selectionHandler.unregister();
-
-    // Detach custom views to prevent "error while closing"
-    this.app.workspace.detachLeavesOfType(AI_SIDEBAR_VIEW_TYPE);
-    this.app.workspace.detachLeavesOfType(WORDBOOK_VIEW_TYPE);
   }
 
   /**
