@@ -10,6 +10,10 @@
   "keywords": ["obsidian", "plugin", "dictionary", "english", "vocabulary", "flashcard"],
   "author": "gibsonchan5",
   "license": "MIT",
+  "dependencies": {
+    "@codemirror/view": "*",
+    "@codemirror/state": "*"
+  },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "esbuild": "^0.20.0",

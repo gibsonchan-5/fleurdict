@@ -91,7 +91,7 @@ export class SelectionHandler {
         y: posY,
         isPhrase: isPhrase(queryWord),
         onAddToWordbook: () => {
-          this.plugin.app.workspace.trigger('fleurdict:add-to-wordbook', queryWord!);
+          this.plugin.app.workspace.trigger('fleurdict:add-to-wordbook', queryWord);
         },
         onAIDetail: () => {
           // Close popup first to avoid overlap with AI modal
