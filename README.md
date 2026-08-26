@@ -1,84 +1,80 @@
-# FleurDict - 优雅的 Obsidian 英语词典插件
+# FleurDict - Elegant English Dictionary for Obsidian
 
-一款功能强大的 Obsidian 英语词典插件，提供划词查询、AI 智能解析、生词本管理和间隔重复复习等完整学习体验。
+An elegant English dictionary plugin for Obsidian, providing word lookup, AI-powered explanations, vocabulary notebook, and spaced repetition review.
 
-## ✨ 核心功能
+## Features
 
-### 📖 智能词典查询
-- **划词即查**：双击单词或划选短语，自动弹出词典释义
-- **多源聚合**：支持有道词典、欧路词典、Free Dictionary API 等多数据源
-- **智能缓存**：自动缓存查询结果，减少重复请求
+### Smart Dictionary Lookup
+- **Click to look up**: Double-click a word or select a phrase to get instant definitions
+- **Multi-source**: Supports Youdao, Eudic, Free Dictionary API, and more
+- **Smart caching**: Automatic caching to reduce redundant API calls
 
-###  AI 智能解析
-- **AI 详解**：一键获取单词的详细讲解，包括词源、记忆技巧、用法示例
-- **AI 翻译**：智能翻译选中的文本或整个句子
-- **多模型支持**：支持 DeepSeek 等主流 AI 服务
-- **流式输出**：实时显示 AI 回复，无需等待完整响应
+### AI-Powered Analysis
+- **AI Explanation**: One-click detailed explanation including etymology, memory tips, and usage examples
+- **AI Translation**: Smart translation for selected text or full sentences
+- **Multi-model support**: Works with DeepSeek and other mainstream AI providers
+- **Streaming output**: Real-time display of AI responses
 
-### 📝 生词本管理
-- **自动收录**：查询过的单词可一键加入生词本
-- **分类管理**：支持自定义分类标签，灵活组织单词
-- **上下文记录**：自动保存单词出现的语境
-- **欧路词典同步**：支持与欧路词典双向同步
+### Vocabulary Notebook
+- **Auto collection**: Add looked-up words to your notebook with one click
+- **POS tags**: Part-of-speech labels rendered as visual tags
+- **Context saving**: Automatically records the context where the word appeared
+- **Eudic sync**: Bidirectional sync with Eudic dictionary
 
-### 🎴 间隔重复复习
-- **SM-2 算法**：基于科学的间隔重复算法，优化记忆效果
-- **闪卡模式**：支持到期复习、分类复习、随机复习
-- **进度追踪**：记录每个单词的复习次数和掌握程度
+### Spaced Repetition Review
+- **SM-2 algorithm**: Scientific spaced repetition for optimal memorization
+- **Flashcard mode**: Due-only, category-based, or random review
+- **Progress tracking**: Records review count and mastery level for each word
 
-###  优雅界面
-- **Light/Dark 主题**：完美适配 Obsidian 浅色和深色主题
-- **响应式设计**：支持桌面端和移动端
-- **可拖拽弹窗**：词典弹窗可自由拖拽和调整大小
+### Elegant Interface
+- **Light/Dark theme**: Seamlessly adapts to Obsidian light and dark themes
+- **Responsive design**: Works on desktop and mobile
+- **Draggable popup**: Freely draggable and resizable dictionary popup
 
-##  安装方式
+## Installation
 
-### 通过社区插件安装（推荐）
+### From Community Plugins (Recommended)
 
-1. 打开 Obsidian 设置 → 社区插件
-2. 搜索 "FleurDict"
-3. 点击安装并启用
+1. Open Obsidian Settings > Community Plugins
+2. Search for "FleurDict"
+3. Click Install and Enable
 
-### 通过 BRAT 安装
+### Via BRAT
 
-1. 安装 [BRAT](https://github.com/TfTHacker/obsidian42-brat) 插件
-2. 打开 BRAT 设置，点击 "Add Beta Plugin"
-3. 输入仓库地址：`gibsonchan5/fleurdict`
+1. Install the [BRAT](https://github.com/TfTHacker/obsidian42-brat) plugin
+2. Open BRAT settings, click "Add Beta Plugin"
+3. Enter repository: `gibsonchan5/fleurdict`
 
-### 手动安装
+### Manual Installation
 
-1. 从 [Releases](https://github.com/gibsonchan5/fleurdict/releases) 下载最新版本
-2. 解压后将文件夹放入 `.obsidian/plugins/` 目录
-3. 在 Obsidian 设置中启用
+1. Download the latest release from [Releases](https://github.com/gibsonchan5/fleurdict/releases)
+2. Extract and copy the folder to `.obsidian/plugins/`
+3. Enable in Obsidian Settings > Community Plugins
 
-## 🚀 快速开始
+## Quick Start
 
-### 1. 配置 AI 服务（可选）
+### 1. Configure AI Service (Optional)
 
-打开设置 → FleurDict → AI 设置，填入 DeepSeek API Key 即可使用 AI 详解和翻译功能。
+Open Settings > FleurDict > AI Settings, enter your DeepSeek API Key to enable AI explanations and translations.
 
-### 2. 开始使用
+### 2. Start Using
 
-- **划词查词**：在编辑器中双击单词或划选短语
-- **右键菜单**：右键选中文本，选择 "查词"、"AI 详解"、"加入生词本"
-- **侧栏**：点击左侧 ribbon 图标打开生词本或 AI 侧栏
+- **Look up words**: Double-click a word or select a phrase in the editor
+- **Right-click menu**: Right-click selected text for "Look up", "AI Explanation", "Add to Vocabulary"
+- **Sidebar**: Click the ribbon icon on the left to open the Vocabulary Notebook or AI sidebar
 
-## 🙏 致谢
+## Credits
 
-- [有道词典](https://dict.youdao.com/) - 词典数据源
-- [欧路词典](https://www.eudic.net/) - 生词本同步支持
-- [Obsidian](https://obsidian.md/) - 优秀的笔记应用
-- [SM-2 算法](https://www.supermemo.com/en/archives/ssm/sm2) - 间隔重复算法
+- [Youdao Dictionary](https://dict.youdao.com/) - Dictionary data source
+- [Eudic](https://www.eudic.net/) - Vocabulary sync support
+- [Obsidian](https://obsidian.md/) - The amazing note-taking app
+- [SM-2 Algorithm](https://www.supermemo.com/en/archives/ssm/sm2) - Spaced repetition algorithm
 
-## 📄 许可证
+## License
 
 MIT License
 
-## 📮 联系方式
+## Contact
 
 - GitHub: [@gibsonchan5](https://github.com/gibsonchan5)
-- Issues: [提交问题](https://github.com/gibsonchan5/fleurdict/issues)
-
----
-
-**Made with ❤️ for Obsidian community**
+- Issues: [Report a bug](https://github.com/gibsonchan5/fleurdict/issues)
