@@ -4,6 +4,12 @@
  * Palette: slate + cyan accent, glass morphism, precise typography.
  */
 
+/* Disable text selection during popup drag */
+body.fleurdict-dragging {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 /* ============================================================================
    Design Tokens
    ============================================================================ */
