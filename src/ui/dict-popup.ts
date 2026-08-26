@@ -3,7 +3,7 @@
  * Floating panel that shows dictionary results
  */
 
-import { Plugin } from 'obsidian';
+import { Plugin, setIcon } from 'obsidian';
 import { DictionaryEntry, DictionaryResult, FleurDictSettings } from '../types';
 import { DictionaryEngine } from '../core/dictionary-engine';
 import { escapeHtml } from '../utils/helpers';
@@ -79,12 +79,12 @@ export class DictPopup {
     const t = this.settings.popupTop;
     const h = this.settings.popupHeight;
     if (l != null && t != null) {
-      this.container.style.left = `${l}px`;
-      this.container.style.top = `${t}px`;
+      this.container.style.setProperty('left', `${l}px`);
+      this.container.style.setProperty('top', `${t}px`);
     }
     // Restore saved height if available
     if (h != null && h > 0) {
-      this.container.style.height = `${h}px`;
+      this.container.style.setProperty('height', `${h}px`);
     }
   }
 
@@ -109,8 +109,8 @@ export class DictPopup {
       this.containerStartLeft = parseInt(this.container!.style.left || '0', 10);
       this.containerStartTop = parseInt(this.container!.style.top || '0', 10);
       // Disable user select during drag for smoother following
-      document.body.style.userSelect = 'none';
-      document.body.style.webkitUserSelect = 'none';
+      document.body.style.setProperty('user-select', 'none');
+      document.body.style.setProperty('-webkit-user-select', 'none');
     });
   }
 
@@ -122,8 +122,8 @@ export class DictPopup {
       if (!this.isDragging || !this.container) return;
       const dx = e.clientX - this.dragStartX;
       const dy = e.clientY - this.dragStartY;
-      this.container.style.left = `${this.containerStartLeft + dx}px`;
-      this.container.style.top = `${this.containerStartTop + dy}px`;
+      this.container.style.setProperty('left', `${this.containerStartLeft + dx}px`);
+      this.container.style.setProperty('top', `${this.containerStartTop + dy}px`);
     };
 
     const onDragUp = () => {
@@ -132,8 +132,8 @@ export class DictPopup {
         document.removeEventListener('mousemove', onDragMove);
         document.removeEventListener('mouseup', onDragUp);
         // Restore user select
-        document.body.style.userSelect = '';
-        document.body.style.webkitUserSelect = '';
+        document.body.style.removeProperty('user-select');
+        document.body.style.removeProperty('-webkit-user-select');
         this.savePopupRect();
       }
     };
@@ -163,7 +163,7 @@ export class DictPopup {
         if (!this.isResizing || !this.container) return;
         const dy = moveEvent.clientY - this.resizeStartY;
         const newHeight = Math.max(300, this.containerStartHeight + dy);
-        this.container.style.height = `${newHeight}px`;
+        this.container.style.setProperty('height', `${newHeight}px`);
       };
 
       const onResizeUp = () => {
@@ -341,15 +341,26 @@ export class DictPopup {
     const content = document.createElement('div');
     content.addClass('fleurdict-popup-content');
 
-    content.innerHTML = `
-      <div class="fleurdict-popup-header">
-        <span class="fleurdict-word">${escapeHtml(word)}</span>
-        <span class="fleurdict-error">未找到释义</span>
-      </div>
-      <div class="fleurdict-popup-body">
-        <p class="fleurdict-error-message">${escapeHtml(message)}</p>
-      </div>
-    `;
+    const header = document.createElement('div');
+    header.addClass('fleurdict-popup-header');
+    const wordEl = document.createElement('span');
+    wordEl.addClass('fleurdict-word');
+    wordEl.textContent = word;
+    const errorLabel = document.createElement('span');
+    errorLabel.addClass('fleurdict-error');
+    errorLabel.textContent = '未找到释义';
+    header.appendChild(wordEl);
+    header.appendChild(errorLabel);
+
+    const body = document.createElement('div');
+    body.addClass('fleurdict-popup-body');
+    const errorMsg = document.createElement('p');
+    errorMsg.addClass('fleurdict-error-message');
+    errorMsg.textContent = message;
+    body.appendChild(errorMsg);
+
+    content.appendChild(header);
+    content.appendChild(body);
 
     this.container.appendChild(content);
     document.body.appendChild(this.container);
@@ -374,7 +385,7 @@ export class DictPopup {
 
     const closeBtn = document.createElement('button');
     closeBtn.addClass('fleurdict-close-btn');
-    closeBtn.innerHTML = '&times;';
+    closeBtn.setText('×');
     closeBtn.addEventListener('click', () => {
       this.close();
     });
@@ -413,7 +424,7 @@ export class DictPopup {
             iconBtn.addClass('fleurdict-play-icon');
             iconBtn.setAttribute('role', 'button');
             iconBtn.setAttribute('aria-label', phonetic.text.startsWith('英') ? '英式发音' : '美式发音');
-            iconBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>';
+            setIcon(iconBtn, 'volume-2');
             iconBtn.addEventListener('click', (e) => {
               e.stopPropagation();
               this.playAudio(word, phonetic.audio);
@@ -439,7 +450,10 @@ export class DictPopup {
     body.addClass('fleurdict-popup-body');
 
     if (results.length === 0 || results[0].entries.length === 0) {
-      body.innerHTML = '<p class="fleurdict-no-result">暂无释义</p>';
+      const noResult = document.createElement('p');
+      noResult.addClass('fleurdict-no-result');
+      noResult.setText('暂无释义');
+      body.appendChild(noResult);
       return body;
     }
 
@@ -555,7 +569,7 @@ export class DictPopup {
       const aiBtn = document.createElement('button');
       aiBtn.addClass('fleurdict-action-btn');
       aiBtn.addClass('fleurdict-ai-btn');
-      aiBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10H12V2z"></path><path d="M20 12a8 8 0 0 0-8-8v8h8z"></path></svg> AI 详解';
+      aiBtn.setText('✨ AI 详解');
       aiBtn.addEventListener('click', () => {
         if (options.onAIDetail) {
           options.onAIDetail();
@@ -569,7 +583,7 @@ export class DictPopup {
       const addBtn = document.createElement('button');
       addBtn.addClass('fleurdict-action-btn');
       addBtn.addClass('fleurdict-add-btn');
-      addBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> 加入生词本';
+      addBtn.setText('+ 加入生词本');
       addBtn.addEventListener('click', () => {
         if (options.onAddToWordbook) {
           options.onAddToWordbook();
@@ -578,7 +592,7 @@ export class DictPopup {
         addBtn.textContent = '✓ 已添加';
         addBtn.addClass('fleurdict-added');
         setTimeout(() => {
-          addBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> 加入生词本';
+          addBtn.setText('+ 加入生词本');
           addBtn.removeClass('fleurdict-added');
         }, 2000);
       });
@@ -623,8 +637,8 @@ export class DictPopup {
       top = margin;
     }
 
-    this.container.style.left = `${left}px`;
-    this.container.style.top = `${top}px`;
+    this.container.style.setProperty('left', `${left}px`);
+    this.container.style.setProperty('top', `${top}px`);
   }
 
   /**

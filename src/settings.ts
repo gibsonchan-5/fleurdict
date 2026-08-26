@@ -30,7 +30,7 @@ export class FleurDictSettingTab extends PluginSettingTab {
     // Section 1: Dictionary Sources
     // =========================================================================
     const dictSection = containerEl.createDiv('fleurdict-settings-section');
-    dictSection.createEl('h3', { text: '词典源设置', cls: 'fleurdict-settings-title' });
+    new Setting(dictSection).setHeading().setName('词典源设置');
 
     dictSection.createEl('p', {
       text: '查词引擎优先使用有道词典（免费、无需配置，中文释义），无结果时自动切换英文词典。',
@@ -112,7 +112,7 @@ export class FleurDictSettingTab extends PluginSettingTab {
     // Section 2: Eudic Sync (欧路词典同步)
     // =========================================================================
     const eudicSection = containerEl.createDiv('fleurdict-settings-section');
-    eudicSection.createEl('h3', { text: '欧路词典同步', cls: 'fleurdict-settings-title' });
+    new Setting(eudicSection).setHeading().setName('欧路词典同步');
 
     eudicSection.createEl('p', {
       text: '将 Obsidian 生词本与欧路词典 App 双向同步。获取 Token：欧路词典官网 → 个人中心 → 开放 API。',
@@ -263,7 +263,7 @@ export class FleurDictSettingTab extends PluginSettingTab {
     // Section 3: AI Settings
     // =========================================================================
     const aiSection = containerEl.createDiv('fleurdict-settings-section');
-    aiSection.createEl('h3', { text: 'AI 设置', cls: 'fleurdict-settings-title' });
+    new Setting(aiSection).setHeading().setName('AI 设置');
 
     new Setting(aiSection)
       .setName('AI Provider')
@@ -399,7 +399,7 @@ export class FleurDictSettingTab extends PluginSettingTab {
     // Section 4: Wordbook Settings
     // =========================================================================
     const wbSection = containerEl.createDiv('fleurdict-settings-section');
-    wbSection.createEl('h3', { text: '生词本设置', cls: 'fleurdict-settings-title' });
+    new Setting(wbSection).setHeading().setName('生词本设置');
 
     new Setting(wbSection)
       .setName('自动提示加入生词本')
@@ -468,7 +468,7 @@ export class FleurDictSettingTab extends PluginSettingTab {
     // Section 5: Flashcard Settings
     // =========================================================================
     const fcSection = containerEl.createDiv('fleurdict-settings-section');
-    fcSection.createEl('h3', { text: '闪卡设置', cls: 'fleurdict-settings-title' });
+    new Setting(fcSection).setHeading().setName('闪卡设置');
 
     new Setting(fcSection)
       .setName('每日新卡上限')
@@ -530,7 +530,7 @@ export class FleurDictSettingTab extends PluginSettingTab {
     // Section 6: Appearance & Shortcuts
     // =========================================================================
     const uiSection = containerEl.createDiv('fleurdict-settings-section');
-    uiSection.createEl('h3', { text: '外观与快捷键', cls: 'fleurdict-settings-title' });
+    new Setting(uiSection).setHeading().setName('外观与快捷键');
 
     new Setting(uiSection)
       .setName('弹窗位置')

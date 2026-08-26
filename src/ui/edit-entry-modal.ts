@@ -1,10 +1,10 @@
 /**
  * FleurDict - Edit Entry Modal
- * Modal dialog for editing a word entry (meaning, phonetic, category, note)
+ * Modal dialog for editing a word entry (meaning, phonetic, note)
  */
 
 import { App, Modal, Setting } from 'obsidian';
-import { WordEntry, WordbookCategory } from '../types';
+import { WordEntry } from '../types';
 import { WordbookManager } from '../core/wordbook-manager';
 
 export class EditEntryModal extends Modal {
@@ -15,7 +15,6 @@ export class EditEntryModal extends Modal {
   private meaningInput: HTMLTextAreaElement;
   private phoneticInput: HTMLInputElement;
   private noteInput: HTMLTextAreaElement;
-  private categorySelect: HTMLSelectElement;
 
   constructor(
     app: App,
@@ -34,7 +33,9 @@ export class EditEntryModal extends Modal {
     contentEl.empty();
     contentEl.addClass('fleurdict-edit-modal');
 
-    contentEl.createEl('h2', { text: `编辑: ${this.entry.word}` });
+    new Setting(contentEl)
+      .setHeading()
+      .setName(`编辑: ${this.entry.word}`);
 
     // Phonetic
     new Setting(contentEl)
@@ -58,28 +59,6 @@ export class EditEntryModal extends Modal {
           });
         this.meaningInput = text.inputEl;
         this.meaningInput.rows = 4;
-      });
-
-    // Category
-    new Setting(contentEl)
-      .setName('分类')
-      .addDropdown((dropdown) => {
-        const categories = this.wordbookManager.getCategories();
-
-        // Add "未分类" as default option
-        const defaultOption = { id: '未分类', name: '未分类' };
-        const allCategories = [defaultOption, ...categories];
-
-        for (const cat of allCategories) {
-          const opt = { id: typeof cat.id === 'string' ? cat.id : cat.name, name: cat.name };
-          dropdown.addOption(opt.id, opt.name);
-        }
-
-        dropdown.setValue(this.entry.category || '未分类');
-        dropdown.onChange((v) => {
-          this.entry.category = v;
-        });
-        this.categorySelect = dropdown.selectEl;
       });
 
     // Note

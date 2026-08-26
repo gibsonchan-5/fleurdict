@@ -2082,6 +2082,22 @@
   overflow: hidden;
 }
 
+/* POS tag — small inline label for part-of-speech (noun, verb, adj., etc.) */
+.fleurdict-pos-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--fleurdict-accent);
+  background: var(--fleurdict-accent-subtle);
+  border-radius: 3px;
+  padding: 0 5px;
+  margin-right: 4px;
+  vertical-align: middle;
+  text-transform: lowercase;
+  line-height: 1.6;
+  letter-spacing: 0.02em;
+}
+
 .fleurdict-wordbook-context {
   font-size: 11px;
   color: var(--fleurdict-text-tertiary);
@@ -2913,4 +2929,3 @@ body.fleurdict-reading-mode .fleurdict-highlight-green {
   background-color: rgba(105, 240, 174, 0.4) !important;
   border-bottom: 2px solid #69f0ae;
 }
-

@@ -12,7 +12,7 @@ import {
 } from 'obsidian';
 import { LLMService, ChatMessage } from '../core/llm-service';
 import { FleurDictSettings } from '../types';
-import { sanitizeHTML } from '../utils/helpers';
+import { sanitizeHTML, appendSafeHTML } from '../utils/helpers';
 
 export const AI_SIDEBAR_VIEW_TYPE = 'fleurdict-ai-sidebar';
 
@@ -132,17 +132,16 @@ export class AISidebarView extends ItemView {
     if (!this.chatContainer) return;
 
     const welcome = this.chatContainer.createDiv('fleurdict-welcome');
-    welcome.innerHTML = `
-      <div class="fleurdict-welcome-icon">F</div>
-      <div class="fleurdict-welcome-title">FleurDict AI</div>
-      <div class="fleurdict-welcome-hint">
-        你可以向我提问任何英语相关问题：<br/>
-        • 翻译句子或段落<br/>
-        • 详解单词的用法和搭配<br/>
-        • 语法讲解<br/>
-        • 近义辨析
-      </div>
-    `;
+    const icon = welcome.createDiv('fleurdict-welcome-icon');
+    icon.setText('F');
+    const title = welcome.createDiv('fleurdict-welcome-title');
+    title.setText('FleurDict AI');
+    const hint = welcome.createDiv('fleurdict-welcome-hint');
+    hint.createDiv().setText('你可以向我提问任何英语相关问题：');
+    hint.createDiv().setText('• 翻译句子或段落');
+    hint.createDiv().setText('• 详解单词的用法和搭配');
+    hint.createDiv().setText('• 语法讲解');
+    hint.createDiv().setText('• 近义辨析');
 
     if (!this.settings.aiApiKey) {
       const warning = welcome.createDiv('fleurdict-welcome-warning');
@@ -268,7 +267,8 @@ export class AISidebarView extends ItemView {
     // Simple markdown rendering
     const html = this.simpleMarkdown(content);
     // Sanitize HTML to prevent XSS attacks
-    el.innerHTML = sanitizeHTML(html);
+    el.empty();
+    appendSafeHTML(el, sanitizeHTML(html));
   }
 
   /**

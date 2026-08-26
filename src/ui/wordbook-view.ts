@@ -9,7 +9,7 @@
  *   - none    → 不限范围（等同 all）
  */
 
-import { ItemView, WorkspaceLeaf, Menu, Modal, TFile, TFolder, Notice } from 'obsidian';
+import { ItemView, WorkspaceLeaf, Menu, Modal, TFile, TFolder, Notice, setIcon } from 'obsidian';
 import { WordEntry, FleurDictSettings } from '../types';
 import { WordbookManager } from '../core/wordbook-manager';
 import { DictionaryEngine } from '../core/dictionary-engine';
@@ -45,7 +45,9 @@ class ContextSearchModal extends Modal {
     contentEl.addClass('fleurdict-ctx-search');
 
     // Title
-    contentEl.createEl('h3', { text: '选择文件夹或笔记（单选）' });
+    new Setting(contentEl)
+      .setHeading()
+      .setName('选择文件夹或笔记（单选）');
 
     // Search input
     const searchWrap = contentEl.createDiv('fleurdict-ctx-search-bar');
@@ -499,14 +501,12 @@ export class WordbookView extends ItemView {
       cls: 'fleurdict-wordbook-word',
     });
 
-    // Meaning — use stored meaning first, Youdao refresh happens later
+    // Meaning — parse POS labels and render as styled tags
     let meaningEl: Element | null = null;
     const displayMeaning = entry.meaning || '';
     if (displayMeaning) {
-      meaningEl = entryEl.createEl('div', {
-        text: displayMeaning,
-        cls: 'fleurdict-wordbook-meaning',
-      });
+      meaningEl = entryEl.createEl('div', { cls: 'fleurdict-wordbook-meaning' });
+      this.renderMeaningWithPOS(meaningEl, displayMeaning);
     } else {
       meaningEl = entryEl.createEl('div', {
         text: '加载中…',
@@ -526,13 +526,13 @@ export class WordbookView extends ItemView {
     const actionsEl = entryEl.createEl('div', { cls: 'fleurdict-wordbook-entry-actions' });
 
     const editBtn = document.createElement('button');
-    editBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>';
+    setIcon(editBtn, 'pencil');
     editBtn.setAttribute('aria-label', '编辑');
     editBtn.addEventListener('click', () => this.openEditModal(entry));
     actionsEl.appendChild(editBtn);
 
     const deleteBtn = document.createElement('button');
-    deleteBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>';
+    setIcon(deleteBtn, 'trash');
     deleteBtn.setAttribute('aria-label', '删除');
     deleteBtn.addEventListener('click', async () => {
       await this.deleteEntry(entry);
@@ -540,12 +540,53 @@ export class WordbookView extends ItemView {
     actionsEl.appendChild(deleteBtn);
 
     const reviewBtn = document.createElement('button');
-    reviewBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>';
+    setIcon(reviewBtn, 'sparkles');
     reviewBtn.setAttribute('aria-label', 'AI 详解');
     reviewBtn.addEventListener('click', () => this.aiDetail(entry));
     actionsEl.appendChild(reviewBtn);
 
     return meaningEl;
+  }
+
+  /**
+   * Render meaning text with POS (part-of-speech) labels styled as tags.
+   * POS labels like "noun", "verb", "adj.", "adv." etc. are wrapped in
+   * <span class="fleurdict-pos-tag"> for distinct styling.
+   */
+  private renderMeaningWithPOS(container: HTMLElement, text: string) {
+    // Common English POS labels (case-insensitive match)
+    const posPattern = /\b(noun|verb|adj\.|adv\.|pron\.|prep\.|conj\.|interj\.|det\.|art\.|aux\.|modal|pl\.|singular|uncountable|countable|phrase|idiom|prefix|suffix|abbr\.|acronym)\b/gi;
+
+    // Split by semicolons to handle multiple definitions
+    const parts = text.split(/；|;/);
+    for (let i = 0; i < parts.length; i++) {
+      if (i > 0) {
+        container.appendChild(document.createTextNode('；'));
+      }
+      const part = parts[i].trim();
+      if (!part) continue;
+
+      // Find the first POS label in this part
+      const match = posPattern.exec(part);
+      posPattern.lastIndex = 0; // reset for next part
+
+      if (match && match.index < 30) {
+        // POS label is near the start — render as tag + rest
+        const before = part.substring(0, match.index);
+        const pos = part.substring(match.index, match.index + match[0].length);
+        const after = part.substring(match.index + match[0].length).trim();
+
+        if (before) {
+          container.appendChild(document.createTextNode(before));
+        }
+        const tag = container.createEl('span', { text: pos, cls: 'fleurdict-pos-tag' });
+        if (after) {
+          container.appendChild(document.createTextNode(after));
+        }
+      } else {
+        container.appendChild(document.createTextNode(part));
+      }
+    }
   }
 
   /**

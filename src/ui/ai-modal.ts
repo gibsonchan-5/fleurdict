@@ -3,10 +3,10 @@
  * Modal for displaying AI translation and detailed explanations
  */
 
-import { App, Modal, Plugin } from 'obsidian';
+import { App, Modal, Plugin, Notice } from 'obsidian';
 import { LLMService, ChatMessage } from '../core/llm-service';
 import { FleurDictSettings } from '../types';
-import { sanitizeHTML } from '../utils/helpers';
+import { sanitizeHTML, appendSafeHTML } from '../utils/helpers';
 
 /**
  * AI Modal - displays AI-generated content with streaming support.
@@ -18,18 +18,21 @@ export class AIModal extends Modal {
   private llmService: LLMService;
   private messages: ChatMessage[];
   private title: string;
+  private originalText?: string;
   private plugin?: Plugin;
 
   private contentEl: HTMLElement;
+  private renderAreaEl: HTMLElement;
   private streamAbortController: AbortController | null = null;
+  private fullContent = '';
+  private copyButton?: HTMLButtonElement;
+  private saveButton?: HTMLButtonElement;
 
   // Drag & resize state
   private isDragging = false;
   private isResizing = false;
-  // Drag: mouse-down point relative to modal's current top-left (in viewport px)
   private dragOffsetX = 0;
   private dragOffsetY = 0;
-  // Current translate offset applied to the modal (accumulated across drags)
   private translateX = 0;
   private translateY = 0;
   private resizeStartW = 0;
@@ -37,7 +40,6 @@ export class AIModal extends Modal {
   private resizeStartX = 0;
   private resizeStartY = 0;
 
-  // Persisted geometry (defaults)
   private static DEFAULT_WIDTH = 700;
   private static DEFAULT_HEIGHT = 520;
 
@@ -47,6 +49,7 @@ export class AIModal extends Modal {
     llmService: LLMService,
     messages: ChatMessage[],
     title: string,
+    originalText?: string,
     plugin?: Plugin
   ) {
     super(app);
@@ -54,90 +57,114 @@ export class AIModal extends Modal {
     this.llmService = llmService;
     this.messages = messages;
     this.title = title;
+    this.originalText = originalText;
     this.plugin = plugin;
   }
 
   async onOpen() {
     const { contentEl, modalEl } = this;
 
-    // Load persisted geometry (or use defaults)
     const saved = this.loadGeometry();
     const w = saved.w || AIModal.DEFAULT_WIDTH;
     const h = saved.h || AIModal.DEFAULT_HEIGHT;
     const left = saved.left;
     const top = saved.top;
 
-    // Modal styling — remove Obsidian's centered constraints
+    // Modal styling
     modalEl.addClass('fleurdict-ai-modal');
-    modalEl.style.width = `${w}px`;
-    modalEl.style.height = `${h}px`;
+    modalEl.style.setProperty('width', `${w}px`);
+    modalEl.style.setProperty('height', `${h}px`);
 
-    // Restore saved position, or center on first open
     if (left !== undefined && top !== undefined) {
       this.translateX = left;
       this.translateY = top;
     } else {
-      // Center in viewport
       const vw = window.innerWidth;
       const vh = window.innerHeight;
       this.translateX = Math.round((vw - w) / 2);
       this.translateY = Math.round((vh - h) / 2);
     }
-    modalEl.style.left = '0';
-    modalEl.style.top = '0';
-    modalEl.style.transform = `translate(${this.translateX}px, ${this.translateY}px)`;
-    modalEl.style.willChange = 'transform';
+    modalEl.style.setProperty('transform', `translate(${this.translateX}px, ${this.translateY}px)`);
 
-    // Title bar (draggable handle) — static styles via CSS class
+    // Title bar
     contentEl.empty();
     const titleBar = contentEl.createDiv('fleurdict-ai-title-bar');
-
     const titleLabel = titleBar.createEl('span', { text: this.title });
     titleLabel.addClass('fleurdict-ai-title-label');
 
-    // Content area — fill remaining space
+    // Content area
     this.contentEl = contentEl.createDiv('fleurdict-ai-content');
-
-    // Make the modal body a flex column — static styles via CSS class
     contentEl.addClass('fleurdict-ai-modal-content');
 
-    // Resize handle (bottom-right corner) — static styles via CSS class
+    // Resize handle
     const resizeHandle = contentEl.createDiv('fleurdict-ai-resize-handle');
+    const resizeIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    resizeIcon.setAttribute('width', '16');
+    resizeIcon.setAttribute('height', '16');
+    resizeIcon.setAttribute('viewBox', '0 0 16 16');
+    resizeIcon.setAttribute('fill', 'none');
+    const rp1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    rp1.setAttribute('d', 'M10 14V10H14');
+    rp1.setAttribute('stroke', 'currentColor');
+    rp1.setAttribute('stroke-width', '1.5');
+    rp1.setAttribute('stroke-linecap', 'round');
+    const rp2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    rp2.setAttribute('d', 'M12 14V6H14');
+    rp2.setAttribute('stroke', 'currentColor');
+    rp2.setAttribute('stroke-width', '1.5');
+    rp2.setAttribute('stroke-linecap', 'round');
+    resizeIcon.appendChild(rp1);
+    resizeIcon.appendChild(rp2);
+    resizeHandle.appendChild(resizeIcon);
 
-    // SVG corner indicator
-    resizeHandle.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 14V10H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M12 14V6H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+    // Original text display (if provided)
+    if (this.originalText) {
+      const originalEl = this.contentEl.createDiv('fleurdict-ai-original-text');
+      const label = originalEl.createSpan();
+      label.textContent = '原文：';
+      label.addClass('fleurdict-ai-original-label');
+      const textSpan = originalEl.createSpan();
+      textSpan.textContent = this.originalText;
+    }
 
-    // Loading indicator — static styles via CSS class
-    const loadingEl = this.contentEl.createDiv('fleurdict-ai-loading');
+    // Dedicated render area for AI output
+    this.renderAreaEl = this.contentEl.createDiv('fleurdict-ai-render-area');
+
+    // Loading indicator
+    const loadingEl = this.renderAreaEl.createDiv('fleurdict-ai-loading');
     loadingEl.setText('AI 正在思考...');
 
-    // Button container — static styles via existing CSS class
+    // Button container
     const buttonContainer = contentEl.createDiv('fleurdict-ai-buttons');
 
     // Copy button
-    const copyButton = buttonContainer.createEl('button', { text: '复制' });
-    copyButton.addClass('mod-cta');
-    copyButton.disabled = true;
-    copyButton.onclick = () => this.copyContent();
+    this.copyButton = buttonContainer.createEl('button', { text: '复制' });
+    this.copyButton.addClass('fleurdict-ai-btn');
+    this.copyButton.disabled = true;
+    this.copyButton.onclick = () => this.copyContent();
+
+    // Save to note button
+    this.saveButton = buttonContainer.createEl('button', { text: '写入笔记' });
+    this.saveButton.addClass('fleurdict-ai-btn');
+    this.saveButton.disabled = true;
+    this.saveButton.onclick = () => this.saveToNote();
 
     // Close button
     const closeButton = buttonContainer.createEl('button', { text: '关闭' });
+    closeButton.addClass('fleurdict-ai-btn');
     closeButton.onclick = () => this.close();
 
     // === Drag to move (title bar) ===
     titleBar.addEventListener('mousedown', (e) => {
-      // Only left-click drag, and not on buttons
       if (e.button !== 0) return;
       if ((e.target as HTMLElement).closest('button')) return;
 
       this.isDragging = true;
-      // Record mouse position relative to modal's current transform origin
       this.dragOffsetX = e.clientX - this.translateX;
       this.dragOffsetY = e.clientY - this.translateY;
-      modalEl.style.cursor = 'grabbing';
-      titleBar.style.cursor = 'grabbing';
-      // Prevent text selection during drag
-      document.body.style.userSelect = 'none';
+      modalEl.addClass('is-dragging');
+      titleBar.addClass('is-dragging');
+      document.body.addClass('fleurdict-dragging');
       e.preventDefault();
     });
 
@@ -149,63 +176,51 @@ export class AIModal extends Modal {
       this.resizeStartH = modalEl.offsetHeight;
       this.resizeStartX = e.clientX;
       this.resizeStartY = e.clientY;
-      document.body.style.userSelect = 'none';
+      document.body.addClass('fleurdict-dragging');
       e.preventDefault();
       e.stopPropagation();
     });
 
-    // Global mousemove / mouseup for drag & resize
     const onGlobalMouseMove = (e: MouseEvent) => {
       if (this.isDragging) {
-        // Update translate offset directly (no layout thrash)
         this.translateX = e.clientX - this.dragOffsetX;
         this.translateY = e.clientY - this.dragOffsetY;
-
-        // Clamp to viewport bounds (keep at least 100px visible)
         const vw = window.innerWidth;
         const vh = window.innerHeight;
         const modalW = modalEl.offsetWidth;
         const modalH = modalEl.offsetHeight;
         this.translateX = Math.max(-modalW + 100, Math.min(vw - 100, this.translateX));
         this.translateY = Math.max(0, Math.min(vh - 60, this.translateY));
-
-        // Apply transform (GPU-composited, no reflow)
-        modalEl.style.transform = `translate(${this.translateX}px, ${this.translateY}px)`;
+        modalEl.style.setProperty('transform', `translate(${this.translateX}px, ${this.translateY}px)`);
       }
       if (this.isResizing) {
         const newW = Math.max(420, this.resizeStartW + (e.clientX - this.resizeStartX));
         const newH = Math.max(300, this.resizeStartH + (e.clientY - this.resizeStartY));
-        modalEl.style.width = `${newW}px`;
-        modalEl.style.height = `${newH}px`;
+        modalEl.style.setProperty('width', `${newW}px`);
+        modalEl.style.setProperty('height', `${newH}px`);
       }
     };
 
     const onGlobalMouseUp = () => {
       if (this.isDragging) {
         this.isDragging = false;
-        modalEl.style.cursor = '';
-        titleBar.style.cursor = 'grab';
-        document.body.style.userSelect = '';
-        // Persist final position
-        this.saveGeometry();
+        modalEl.removeClass('is-dragging');
+        titleBar.removeClass('is-dragging');
+        document.body.removeClass('fleurdict-dragging');
+        this.saveGeometry().catch(() => { /* ignore */ });
       }
       if (this.isResizing) {
         this.isResizing = false;
-        // Persist geometry
-        this.saveGeometry();
+        this.saveGeometry().catch(() => { /* ignore */ });
       }
     };
 
     document.addEventListener('mousemove', onGlobalMouseMove);
     document.addEventListener('mouseup', onGlobalMouseUp);
 
-    // Start streaming
-    await this.startStreaming(loadingEl, copyButton);
+    await this.startStreaming(loadingEl, this.copyButton, this.saveButton);
   }
 
-  /**
-   * Load persisted geometry from plugin data
-   */
   private loadGeometry(): { w?: number; h?: number; left?: number; top?: number } {
     if (!this.plugin) return {};
     try {
@@ -215,10 +230,7 @@ export class AIModal extends Modal {
     return {};
   }
 
-  /**
-   * Save current geometry to plugin data
-   */
-  private saveGeometry() {
+  private async saveGeometry() {
     if (!this.plugin) return;
     const modalEl = this.modalEl;
     if (!modalEl) return;
@@ -229,42 +241,36 @@ export class AIModal extends Modal {
       left: Math.round(rect.left),
       top: Math.round(rect.top),
     };
-    // Clamp to reasonable bounds
     geom.w = Math.max(380, Math.min(geom.w, window.innerWidth - 40));
     geom.h = Math.max(260, Math.min(geom.h, window.innerHeight - 40));
     try {
-      const pluginAny = this.plugin as any;
-      if (!pluginAny.settings) pluginAny.settings = {};
-      pluginAny.settings._aiModalGeometry = geom;
-      pluginAny.saveData(Object.assign({}, pluginAny.settings));
-    } catch { /* ignore save errors */ }
+      const data = (await this.plugin.loadData()) || {};
+      if (!data.settings) data.settings = {};
+      data.settings._aiModalGeometry = geom;
+      await this.plugin.saveData(data);
+    } catch { /* ignore */ }
   }
 
-  /**
-   * Start streaming AI response
-   */
-  private async startStreaming(loadingEl: HTMLElement, copyButton: HTMLButtonElement) {
-    let fullContent = '';
+  private async startStreaming(loadingEl: HTMLElement, copyButton?: HTMLButtonElement, saveButton?: HTMLButtonElement) {
+    this.fullContent = '';
 
     this.streamAbortController = await this.llmService.sendMessageStream(
       this.messages,
       (chunk) => {
-        // Remove loading indicator on first chunk
         if (loadingEl.parentElement) {
           loadingEl.remove();
         }
-
         if (chunk.content) {
-          fullContent += chunk.content;
-          this.renderContent(fullContent);
+          this.fullContent += chunk.content;
+          this.renderContent(this.fullContent);
         }
       },
       () => {
-        // Streaming complete
-        copyButton.disabled = !fullContent;
+        const hasContent = !!this.fullContent;
+        if (copyButton) copyButton.disabled = !hasContent;
+        if (saveButton) saveButton.disabled = !hasContent;
       },
       (error) => {
-        // Error occurred
         loadingEl.setText(`错误：${error.message}`);
         loadingEl.addClass('fleurdict-ai-error-text');
         console.error('FleurDict: AI streaming error:', error);
@@ -272,9 +278,6 @@ export class AIModal extends Modal {
     );
   }
 
-  /**
-   * Render content with markdown support
-   */
   private renderContent(content: string) {
     const lines = content.split('\n');
     const htmlLines: string[] = [];
@@ -283,14 +286,12 @@ export class AIModal extends Modal {
     let inTableHead = false;
 
     for (const line of lines) {
-      // Horizontal rule
       if (/^---+$/.test(line.trim())) {
         if (inList) { htmlLines.push('</ul>'); inList = false; }
         htmlLines.push('<hr class="fleurdict-ai-hr">');
         continue;
       }
 
-      // H4: #### title (must match before ### to avoid partial match)
       const h4 = line.match(/^####\s+(.+)$/);
       if (h4) {
         if (inList) { htmlLines.push('</ul>'); inList = false; }
@@ -298,7 +299,6 @@ export class AIModal extends Modal {
         continue;
       }
 
-      // H3: ### title
       const h3 = line.match(/^###\s+(.+)$/);
       if (h3) {
         if (inList) { htmlLines.push('</ul>'); inList = false; }
@@ -306,7 +306,6 @@ export class AIModal extends Modal {
         continue;
       }
 
-      // H2: ## title
       const h2 = line.match(/^##\s+(.+)$/);
       if (h2) {
         if (inList) { htmlLines.push('</ul>'); inList = false; }
@@ -314,7 +313,6 @@ export class AIModal extends Modal {
         continue;
       }
 
-      // H1: # title
       const h1 = line.match(/^#\s+(.+)$/);
       if (h1) {
         if (inList) { htmlLines.push('</ul>'); inList = false; }
@@ -322,7 +320,6 @@ export class AIModal extends Modal {
         continue;
       }
 
-      // Unordered list item: - text or * text
       const li = line.match(/^[\-\*]\s+(.+)$/);
       if (li) {
         if (!inList) { htmlLines.push('<ul class="fleurdict-ai-ul">'); inList = true; }
@@ -330,28 +327,22 @@ export class AIModal extends Modal {
         continue;
       }
 
-      // Ordered list item: 1. text
       const oli = line.match(/^\d+\.\s+(.+)$/);
       if (oli) {
         htmlLines.push(`<p class="fleurdict-ai-oli">${this.inlineMarkdown(oli[1])}</p>`);
         continue;
       }
 
-      // Blockquote: > text
       const bq = line.match(/^>\s*(.+)$/);
       if (bq) {
         htmlLines.push(`<div class="fleurdict-ai-bq">${this.inlineMarkdown(bq[1])}</div>`);
         continue;
       }
 
-      // Markdown table: | cell | cell |
       if (line.trim().startsWith('|') && line.trim().endsWith('|')) {
-        // Separator row: |---|---|---|
         if (/^\|[\s\-:|]+\|$/.test(line.trim())) {
-          // just skip separator rows, table is already open
           continue;
         }
-        // Data row
         if (!inTable) {
           htmlLines.push('<table class="fleurdict-ai-table">');
           inTable = true;
@@ -367,61 +358,47 @@ export class AIModal extends Modal {
         continue;
       }
 
-      // Close table if we were in one and hit a non-table line
       if (inTable) {
         htmlLines.push('</tbody></table>');
         inTable = false;
         inTableHead = false;
       }
 
-      // Empty line
       if (line.trim() === '') {
         if (inList) { htmlLines.push('</ul>'); inList = false; }
         htmlLines.push('<br>');
         continue;
       }
 
-      // Regular paragraph
       if (inList) { htmlLines.push('</ul>'); inList = false; }
       htmlLines.push(`<p class="fleurdict-ai-p">${this.inlineMarkdown(line)}</p>`);
     }
 
     if (inList) { htmlLines.push('</ul>'); }
     if (inTable) { htmlLines.push('</tbody></table>'); }
-    
-    // Sanitize HTML to prevent XSS attacks
+
     const safeHtml = sanitizeHTML(htmlLines.join(''));
-    this.contentEl.innerHTML = safeHtml;
+    this.renderAreaEl.empty();
+    appendSafeHTML(this.renderAreaEl, safeHtml);
   }
 
-  /**
-   * Render inline markdown (bold, italic, code, links)
-   */
   private inlineMarkdown(text: string): string {
     return text
-      // **bold**
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      // *italic* (but not **bold**)
       .replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>')
-      // [text](url) links
       .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="fleurdict-ai-link">$1</a>')
-      // `inline code`
       .replace(/`([^`]+)`/g, '<code class="fleurdict-ai-code">$1</code>')
       ;
   }
 
-  /**
-   * Copy content to clipboard
-   */
   private async copyContent() {
-    const text = this.contentEl.innerText;
+    // Copy only the render area text (AI response), not the original text or buttons
+    const text = this.renderAreaEl.innerText;
     try {
       await navigator.clipboard.writeText(text);
-
-      // Show feedback
-      const originalText = this.contentEl.parentElement?.querySelector('button')?.textContent;
-      const copyButton = this.contentEl.parentElement?.querySelector('button');
+      const copyButton = this.copyButton;
       if (copyButton) {
+        const originalText = copyButton.textContent;
         copyButton.textContent = '已复制！';
         setTimeout(() => {
           if (copyButton) copyButton.textContent = originalText || '复制';
@@ -432,13 +409,58 @@ export class AIModal extends Modal {
     }
   }
 
+  private async saveToNote() {
+    const app = this.app;
+    const vault = app.vault;
+
+    const lines: string[] = [];
+    lines.push(`# ${this.title}`);
+    lines.push('');
+    if (this.originalText) {
+      lines.push(`> ${this.originalText}`);
+      lines.push('');
+    }
+    lines.push('---');
+    lines.push('');
+    if (this.fullContent) {
+      lines.push(this.fullContent);
+    } else {
+      lines.push(this.renderAreaEl?.innerText || '');
+    }
+    lines.push('');
+
+    const md = lines.join('\n');
+
+    try {
+      const folder = 'FleurDict';
+      if (!vault.getAbstractFileByPath(folder)) {
+        await vault.createFolder(folder);
+      }
+
+      const safeTitle = (this.originalText || this.title)
+        .replace(/[^a-zA-Z0-9\u4e00-\u9fff\s-]/g, '')
+        .replace(/\s+/g, '_')
+        .substring(0, 50)
+        .trim() || 'ai-response';
+
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+      const fileName = `${folder}/${safeTitle}-${dateStr}.md`;
+
+      const file = await vault.create(fileName, md);
+      const leaf = app.workspace.getLeaf('tab');
+      await leaf.openFile(file);
+      new Notice(`✓ 已写入笔记：${fileName}`);
+    } catch (e: any) {
+      new Notice(`写入笔记失败：${e.message}`);
+    }
+  }
+
   onClose() {
-    // Abort streaming if in progress
     if (this.streamAbortController) {
       this.streamAbortController.abort();
       this.streamAbortController = null;
     }
-
     const { contentEl } = this;
     contentEl.empty();
   }
@@ -458,7 +480,7 @@ export async function showAITranslation(
   const { buildAITranslatePrompt } = await import('../core/llm-service');
   const messages = buildAITranslatePrompt(text, context);
 
-  const modal = new AIModal(app, settings, llmService, messages, 'AI 翻译', plugin);
+  const modal = new AIModal(app, settings, llmService, messages, 'AI 翻译', text, plugin);
   modal.open();
 }
 
@@ -476,6 +498,6 @@ export async function showAIDetail(
   const { buildAIDetailPrompt } = await import('../core/llm-service');
   const messages = buildAIDetailPrompt(word, context);
 
-  const modal = new AIModal(app, settings, llmService, messages, `AI 详解：${word}`, plugin);
+  const modal = new AIModal(app, settings, llmService, messages, 'AI 详解', word, plugin);
   modal.open();
 }

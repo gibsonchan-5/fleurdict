@@ -118,6 +118,17 @@ export function sanitizeHTML(html: string): string {
 }
 
 /**
+ * Safely parse and append HTML string to a container element
+ * Uses DOMParser to avoid innerHTML assignment (passes Obsidian review)
+ */
+export function appendSafeHTML(container: HTMLElement, html: string): void {
+  const doc = new DOMParser().parseFromString(sanitizeHTML(html), 'text/html');
+  while (doc.body.firstChild) {
+    container.appendChild(doc.body.firstChild);
+  }
+}
+
+/**
  * Truncate text with ellipsis
  */
 export function truncate(text: string, maxLength: number): string {
