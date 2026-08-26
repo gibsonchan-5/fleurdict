@@ -1,7 +1,7 @@
 {
   "id": "fleurdict",
   "name": "FleurDict",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "minAppVersion": "1.13.0",
   "description": "An elegant English dictionary plugin with word lookup, AI translation, vocabulary notebook and flashcard review.",
   "author": "gibsonchan5",
