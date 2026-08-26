@@ -98,17 +98,17 @@ export class AIModal extends Modal {
 
     // Resize handle
     const resizeHandle = contentEl.createDiv('fleurdict-ai-resize-handle');
-    const resizeIcon = resizeHandle.createSvg('svg');
+    const resizeIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     resizeIcon.setAttribute('width', '16');
     resizeIcon.setAttribute('height', '16');
     resizeIcon.setAttribute('viewBox', '0 0 16 16');
     resizeIcon.setAttribute('fill', 'none');
-    const rp1 = resizeIcon.createSvg('path');
+    const rp1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     rp1.setAttribute('d', 'M10 14V10H14');
     rp1.setAttribute('stroke', 'currentColor');
     rp1.setAttribute('stroke-width', '1.5');
     rp1.setAttribute('stroke-linecap', 'round');
-    const rp2 = resizeIcon.createSvg('path');
+    const rp2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     rp2.setAttribute('d', 'M12 14V6H14');
     rp2.setAttribute('stroke', 'currentColor');
     rp2.setAttribute('stroke-width', '1.5');
@@ -320,7 +320,7 @@ export class AIModal extends Modal {
         continue;
       }
 
-      const li = line.match(/^[-*]\s+(.+)$/);
+      const li = line.match(/^[\-\*]\s+(.+)$/);
       if (li) {
         if (!inList) { htmlLines.push('<ul class="fleurdict-ai-ul">'); inList = true; }
         htmlLines.push(`<li class="fleurdict-ai-li">${this.inlineMarkdown(li[1])}</li>`);

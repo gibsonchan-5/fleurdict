@@ -146,7 +146,9 @@ export class DictPopup {
   private setupVerticalResize(): void {
     if (!this.container) return;
 
-    const resizeHandle = this.container.createDiv('fleurdict-resize-handle');
+    const resizeHandle = document.createElement('div');
+    resizeHandle.addClass('fleurdict-resize-handle');
+    this.container.appendChild(resizeHandle);
 
     resizeHandle.addEventListener('mousedown', (e) => {
       e.preventDefault();
@@ -268,23 +270,27 @@ export class DictPopup {
    * Create background overlay (transparent, for click-outside-to-close)
    */
   private createOverlay(): void {
-    this.overlay = document.body.createDiv('fleurdict-overlay');
+    this.overlay = document.createElement('div');
+    this.overlay.addClass('fleurdict-overlay');
     this.overlay.addEventListener('click', (e) => {
       // Only close if clicking the overlay itself, not its children
       if (e.target === this.overlay) {
         this.close();
       }
     });
+    document.body.appendChild(this.overlay);
   }
 
   /**
    * Create the main popup container
    */
   private createPopup(word: string, results: DictionaryResult[], options: DictPopupOptions): void {
-    this.container = document.body.createDiv('fleurdict-popup');
+    this.container = document.createElement('div');
+    this.container.addClass('fleurdict-popup');
 
     // Build content
-    const content = this.container.createDiv('fleurdict-popup-content');
+    const content = document.createElement('div');
+    content.addClass('fleurdict-popup-content');
 
     // Header
     const header = this.buildHeader(word, results);
@@ -297,6 +303,11 @@ export class DictPopup {
     // Footer - action buttons
     const footer = this.buildFooter(options);
     content.appendChild(footer);
+
+    this.container.appendChild(content);
+
+    // Position and add to DOM
+    document.body.appendChild(this.container);
 
     // Apply saved position/size if available, otherwise use default positioning
     if (this.settings.popupLeft != null && this.settings.popupTop != null) {
@@ -322,20 +333,35 @@ export class DictPopup {
    * Create error popup
    */
   private createErrorPopup(word: string, message: string): void {
-    this.container = document.body.createDiv('fleurdict-popup');
+    this.container = document.createElement('div');
+    this.container.addClass('fleurdict-popup');
 
-    const content = this.container.createDiv('fleurdict-popup-content');
+    const content = document.createElement('div');
+    content.addClass('fleurdict-popup-content');
 
-    const header = content.createDiv('fleurdict-popup-header');
-    const wordEl = header.createSpan('fleurdict-word');
+    const header = document.createElement('div');
+    header.addClass('fleurdict-popup-header');
+    const wordEl = document.createElement('span');
+    wordEl.addClass('fleurdict-word');
     wordEl.textContent = word;
-    const errorLabel = header.createSpan('fleurdict-error');
+    const errorLabel = document.createElement('span');
+    errorLabel.addClass('fleurdict-error');
     errorLabel.textContent = '未找到释义';
+    header.appendChild(wordEl);
+    header.appendChild(errorLabel);
 
-    const body = content.createDiv('fleurdict-popup-body');
-    const errorMsg = body.createEl('p', 'fleurdict-error-message');
+    const body = document.createElement('div');
+    body.addClass('fleurdict-popup-body');
+    const errorMsg = document.createElement('p');
+    errorMsg.addClass('fleurdict-error-message');
     errorMsg.textContent = message;
+    body.appendChild(errorMsg);
 
+    content.appendChild(header);
+    content.appendChild(body);
+
+    this.container.appendChild(content);
+    document.body.appendChild(this.container);
     this.positionPopup(window.innerWidth / 2, window.innerHeight / 2);
   }
 
@@ -343,42 +369,57 @@ export class DictPopup {
    * Build popup header (word on top, phonetics below)
    */
   private buildHeader(word: string, results: DictionaryResult[]): HTMLElement {
-    const header = document.body.createDiv('fleurdict-popup-header');
+    const header = document.createElement('div');
+    header.addClass('fleurdict-popup-header');
 
     // Top row: word + close button
-    const topRow = header.createDiv('fleurdict-header-top');
+    const topRow = document.createElement('div');
+    topRow.addClass('fleurdict-header-top');
 
-    const wordEl = topRow.createSpan('fleurdict-word');
+    const wordEl = document.createElement('span');
+    wordEl.addClass('fleurdict-word');
     wordEl.textContent = word;
+    topRow.appendChild(wordEl);
 
-    const closeBtn = topRow.createEl('button', 'fleurdict-close-btn');
+    const closeBtn = document.createElement('button');
+    closeBtn.addClass('fleurdict-close-btn');
     closeBtn.setText('×');
     closeBtn.addEventListener('click', () => {
       this.close();
     });
+    topRow.appendChild(closeBtn);
+
+    header.appendChild(topRow);
 
     // Bottom: phonetics — each on its own line, aligned with word
     const firstEntry = results[0]?.entries[0];
     if (firstEntry && this.settings.showPhonetic && firstEntry.phonetics.length > 0) {
       header.addClass('has-phonetics');
-      const phoneticsContainer = header.createDiv('fleurdict-phonetics-col');
+      const phoneticsContainer = document.createElement('div');
+      phoneticsContainer.addClass('fleurdict-phonetics-col');
 
       for (const phonetic of firstEntry.phonetics) {
-        const phoneticItem = phoneticsContainer.createDiv('fleurdict-phonetic-item');
+        const phoneticItem = document.createElement('div');
+        phoneticItem.addClass('fleurdict-phonetic-item');
 
         if (phonetic.text) {
           // Label: 英 or 美
-          const label = phoneticItem.createSpan('fleurdict-phonetic-badge');
+          const label = document.createElement('span');
+          label.addClass('fleurdict-phonetic-badge');
           label.textContent = phonetic.text.startsWith('英') ? '英' : '美';
+          phoneticItem.appendChild(label);
 
           // IPA text
           const ipaText = phonetic.text.replace(/^[英美]\s*/, '');
-          const ipa = phoneticItem.createSpan('fleurdict-phonetic-ipa');
+          const ipa = document.createElement('span');
+          ipa.addClass('fleurdict-phonetic-ipa');
           ipa.textContent = ipaText;
+          phoneticItem.appendChild(ipa);
 
           if (this.settings.showAudioButton && phonetic.audio) {
             // Speaker icon
-            const iconBtn = phoneticItem.createSpan('fleurdict-play-icon');
+            const iconBtn = document.createElement('span');
+            iconBtn.addClass('fleurdict-play-icon');
             iconBtn.setAttribute('role', 'button');
             iconBtn.setAttribute('aria-label', phonetic.text.startsWith('英') ? '英式发音' : '美式发音');
             setIcon(iconBtn, 'volume-2');
@@ -386,9 +427,14 @@ export class DictPopup {
               e.stopPropagation();
               this.playAudio(word, phonetic.audio);
             });
+            phoneticItem.appendChild(iconBtn);
           }
         }
+
+        phoneticsContainer.appendChild(phoneticItem);
       }
+
+      header.appendChild(phoneticsContainer);
     }
 
     return header;
@@ -398,11 +444,14 @@ export class DictPopup {
    * Build popup body (meanings and definitions)
    */
   private buildBody(word: string, results: DictionaryResult[]): HTMLElement {
-    const body = document.body.createDiv('fleurdict-popup-body');
+    const body = document.createElement('div');
+    body.addClass('fleurdict-popup-body');
 
     if (results.length === 0 || results[0].entries.length === 0) {
-      const noResult = body.createEl('p', 'fleurdict-no-result');
+      const noResult = document.createElement('p');
+      noResult.addClass('fleurdict-no-result');
       noResult.setText('暂无释义');
+      body.appendChild(noResult);
       return body;
     }
 
@@ -420,10 +469,13 @@ export class DictPopup {
           if (totalShown >= maxPosSections) break;
 
           // Part of speech section
-          const posSection = body.createDiv('fleurdict-pos-section');
+          const posSection = document.createElement('div');
+          posSection.addClass('fleurdict-pos-section');
 
-          const posLabel = posSection.createDiv('fleurdict-pos-label');
+          const posLabel = document.createElement('div');
+          posLabel.addClass('fleurdict-pos-label');
           posLabel.textContent = this.translatePOS(meaning.partOfSpeech);
+          posSection.appendChild(posLabel);
 
           // Definitions list
           // Use ol only when multiple definitions; use div (no number) when only one
@@ -431,45 +483,70 @@ export class DictPopup {
           if (defs.length <= 1) {
             // Single definition — no numbering
             for (const def of defs) {
-              const defItem = posSection.createDiv('fleurdict-def-item');
+              const defItem = document.createElement('div');
+              defItem.addClass('fleurdict-def-item');
 
-              const defText = defItem.createSpan('fleurdict-def-text');
+              const defText = document.createElement('span');
+              defText.addClass('fleurdict-def-text');
               defText.textContent = def.definition;
+              defItem.appendChild(defText);
 
               if (this.settings.showExamples && def.example) {
-                const exampleEl = defItem.createDiv('fleurdict-example');
+                const exampleEl = document.createElement('div');
+                exampleEl.addClass('fleurdict-example');
                 exampleEl.textContent = def.example;
+                defItem.appendChild(exampleEl);
               }
+
+              posSection.appendChild(defItem);
             }
           } else {
             // Multiple definitions — numbered
-            const defList = posSection.createEl('ol', 'fleurdict-def-list');
+            const defList = document.createElement('ol');
+            defList.addClass('fleurdict-def-list');
 
             for (const def of defs) {
-              const defItem = defList.createEl('li', 'fleurdict-def-item');
+              const defItem = document.createElement('li');
+              defItem.addClass('fleurdict-def-item');
 
-              const defText = defItem.createSpan('fleurdict-def-text');
+              const defText = document.createElement('span');
+              defText.addClass('fleurdict-def-text');
               defText.textContent = def.definition;
+              defItem.appendChild(defText);
 
               if (this.settings.showExamples && def.example) {
-                const exampleEl = defItem.createDiv('fleurdict-example');
+                const exampleEl = document.createElement('div');
+                exampleEl.addClass('fleurdict-example');
                 exampleEl.textContent = def.example;
+                defItem.appendChild(exampleEl);
               }
-            }
+
+            defList.appendChild(defItem);
           }
+
+          posSection.appendChild(defList);
+        }
 
           // Synonyms
           if (meaning.synonyms.length > 0) {
-            const synSection = posSection.createDiv('fleurdict-synonyms');
+            const synSection = document.createElement('div');
+            synSection.addClass('fleurdict-synonyms');
 
-            const synLabel = synSection.createSpan('fleurdict-syn-label');
+            const synLabel = document.createElement('span');
+            synLabel.addClass('fleurdict-syn-label');
             synLabel.textContent = '同义词：';
+            synSection.appendChild(synLabel);
 
             const synWords = meaning.synonyms.slice(0, 8).join(', ');
-            const synText = synSection.createSpan('fleurdict-syn-text');
+            const synText = document.createElement('span');
+            synText.addClass('fleurdict-syn-text');
             synText.textContent = synWords;
+            synSection.appendChild(synText);
+
+            posSection.appendChild(synSection);
           }
 
+          body.appendChild(posSection);
           totalShown++;
         }
       }
@@ -482,22 +559,28 @@ export class DictPopup {
    * Build popup footer (action buttons)
    */
   private buildFooter(options: DictPopupOptions): HTMLElement {
-    const footer = document.body.createDiv('fleurdict-popup-footer');
+    const footer = document.createElement('div');
+    footer.addClass('fleurdict-popup-footer');
 
     // AI Detail button
     if (this.settings.showAIDetailButton) {
-      const aiBtn = footer.createEl('button', 'fleurdict-action-btn fleurdict-ai-btn');
+      const aiBtn = document.createElement('button');
+      aiBtn.addClass('fleurdict-action-btn');
+      aiBtn.addClass('fleurdict-ai-btn');
       aiBtn.setText('✨ AI 详解');
       aiBtn.addEventListener('click', () => {
         if (options.onAIDetail) {
           options.onAIDetail();
         }
       });
+      footer.appendChild(aiBtn);
     }
 
     // Add to wordbook button
     if (this.settings.showAddToWordbookButton) {
-      const addBtn = footer.createEl('button', 'fleurdict-action-btn fleurdict-add-btn');
+      const addBtn = document.createElement('button');
+      addBtn.addClass('fleurdict-action-btn');
+      addBtn.addClass('fleurdict-add-btn');
       addBtn.setText('+ 加入生词本');
       addBtn.addEventListener('click', () => {
         if (options.onAddToWordbook) {
@@ -511,6 +594,7 @@ export class DictPopup {
           addBtn.removeClass('fleurdict-added');
         }, 2000);
       });
+      footer.appendChild(addBtn);
     }
 
     return footer;
