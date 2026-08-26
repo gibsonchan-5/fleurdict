@@ -109,8 +109,7 @@ export class DictPopup {
       this.containerStartLeft = parseInt(this.container!.style.left || '0', 10);
       this.containerStartTop = parseInt(this.container!.style.top || '0', 10);
       // Disable user select during drag for smoother following
-      document.body.style.setProperty('user-select', 'none');
-      document.body.style.setProperty('-webkit-user-select', 'none');
+      document.body.classList.add('fleurdict-dragging');
     });
   }
 
@@ -132,8 +131,7 @@ export class DictPopup {
         document.removeEventListener('mousemove', onDragMove);
         document.removeEventListener('mouseup', onDragUp);
         // Restore user select
-        document.body.style.removeProperty('user-select');
-        document.body.style.removeProperty('-webkit-user-select');
+        document.body.classList.remove('fleurdict-dragging');
         this.savePopupRect();
       }
     };
