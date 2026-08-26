@@ -13,13 +13,13 @@ import { EudicService } from './core/eudic-service';
 import { SelectionHandler } from './features/selection-handler';
 import { ContextMenuManager } from './features/context-menu';
 import { CommandManager } from './features/commands';
-import { ReadingModeHandler } from './features/reading-mode-handler';
 import { FleurDictSettingTab } from './settings';
 import { showAITranslation, showAIDetail } from './ui/ai-modal';
 import { AISidebarView, AI_SIDEBAR_VIEW_TYPE } from './ui/ai-sidebar';
 import { FlashcardModal } from './ui/flashcard-modal';
 import { WordbookView, WORDBOOK_VIEW_TYPE } from './ui/wordbook-view';
 import { createWordHighlightPlugin, refreshAllEditorHighlights } from './features/word-highlighter';
+import { ReadingModeHandler } from './features/reading-mode-handler';
 
 /**
  * FleurDict Plugin
@@ -37,6 +37,9 @@ export default class FleurDictPlugin extends Plugin {
   readingModeHandler!: ReadingModeHandler;
 
   async onload() {
+    console.log('[FleurDict-DIAG] === Plugin loading BUILD v2026-08-22-1925 ===');
+    console.log('[FleurDict-DIAG] Loading plugin...');
+
     // Load settings
     await this.loadSettings();
 
@@ -60,19 +63,11 @@ export default class FleurDictPlugin extends Plugin {
       this.wordbookManager,
       this.flashcardEngine
     );
-    this.readingModeHandler = new ReadingModeHandler(
-      this,
-      this.wordbookManager,
-      this.selectionHandler
-    );
 
     // Register event handlers
     this.selectionHandler.register();
     this.contextMenuManager.register();
     this.commandManager.register();
-    this.readingModeHandler.register();
-
-    // Initialize reading mode handler (auto-detects preview mode, no toggle needed)
 
     // Register settings tab
     this.addSettingTab(new FleurDictSettingTab(this.app, this));
@@ -87,60 +82,42 @@ export default class FleurDictPlugin extends Plugin {
       return new WordbookView(leaf, this.settings, this.wordbookManager, this.dictEngine);
     });
 
-    // Force-detach all existing leaves for our views to clear any stale/orphan
-    // leaves from previous sessions (e.g. "插件不再活动" errors caused by the
-    // workspace caching a view state from a broken build). This is safe because
-    // registerView has already wired up the factory — any leaf that was open
-    // will be recreated by Obsidian on the next reveal.
-    // Defer to next tick so view registration is fully wired up first.
-    this.app.workspace.onLayoutReady(() => {
-      for (const viewType of [WORDBOOK_VIEW_TYPE, AI_SIDEBAR_VIEW_TYPE]) {
-        try {
-          const leaves = this.app.workspace.getLeavesOfType(viewType);
-          for (const leaf of leaves) {
-            leaf.detach();
-          }
-        } catch (e) {
-          console.warn(`FleurDict: orphan cleanup for ${viewType} failed:`, e);
-        }
-      }
-    });
-
-    // Register word highlight CM6 extensions (StateField + ViewPlugin)
-    const highlightExtensions = createWordHighlightPlugin(this, this.wordbookManager);
-    this.registerEditorExtension(highlightExtensions);
-
     // Register workspace events
     this.registerWorkspaceEvents();
 
-    // Ribbon: 生词本入口
+    // Register CM6 editor extension for word highlighting in edit mode
+    const [refreshField, highlightPlugin] = createWordHighlightPlugin(this, this.wordbookManager);
+    this.registerEditorExtension([refreshField, highlightPlugin]);
+
+    // Initialize reading mode handler for word highlighting in preview mode
+    this.readingModeHandler = new ReadingModeHandler(this, this.wordbookManager, this.selectionHandler);
+    this.readingModeHandler.register();
+
+    // 启动时延迟刷新所有视图的高亮（确保已打开的笔记也能高亮）
+    this.app.workspace.onLayoutReady(() => {
+      setTimeout(() => {
+        refreshAllEditorHighlights();
+        this.readingModeHandler?.refreshAllReadingViews();
+      }, 500);
+    });
+
+    // Ribbon: 只保留生词本入口（查词走右键菜单，AI 走右键菜单）
     this.addRibbonIcon('book-open', 'FleurDict 生词本', () => {
       this.activateWordbookView();
     });
+
+    console.log('FleurDict: Plugin loaded successfully');
   }
 
   onunload() {
+    console.log('FleurDict: Unloading plugin...');
 
     // Unregister event handlers
-    try {
-      this.selectionHandler.unregister();
-      this.readingModeHandler.unregister();
-    } catch (e) {
-      console.error('FleurDict: Error unregistering handlers:', e);
-    }
+    this.selectionHandler.unregister();
 
-    // Detach custom views to prevent "error while closing".
-    // Wrap each detach in try/catch so one failing view doesn't break the others.
-    try {
-      this.app.workspace.detachLeavesOfType(AI_SIDEBAR_VIEW_TYPE);
-    } catch (e) {
-      console.error('FleurDict: Error detaching AI sidebar:', e);
-    }
-    try {
-      this.app.workspace.detachLeavesOfType(WORDBOOK_VIEW_TYPE);
-    } catch (e) {
-      console.error('FleurDict: Error detaching wordbook view:', e);
-    }
+    // Detach custom views to prevent "error while closing"
+    this.app.workspace.detachLeavesOfType(AI_SIDEBAR_VIEW_TYPE);
+    this.app.workspace.detachLeavesOfType(WORDBOOK_VIEW_TYPE);
   }
 
   /**
@@ -157,6 +134,7 @@ export default class FleurDictPlugin extends Plugin {
     if (this.settings.eudicCategoryId && this.settings.eudicCategoryId !== '0') {
       this.settings.eudicCategoryId = '0';
     }
+    console.log('FleurDict: Loaded settings, dictionarySource =', this.settings.dictionarySource);
   }
 
   /**
@@ -246,12 +224,6 @@ export default class FleurDictPlugin extends Plugin {
       // Add to local wordbook
       await this.wordbookManager.addEntry(word, meaning, phonetic, context, undefined, audioUrlUK, audioUrlUS);
 
-      // Refresh editor highlights (CM6 decorations)
-      refreshAllEditorHighlights(this);
-
-      // Refresh reading/preview mode highlights (DOM-based)
-      this.readingModeHandler?.refreshAllReadingViews();
-
       // Refresh wordbook view if open
       const leaves = this.app.workspace.getLeavesOfType(WORDBOOK_VIEW_TYPE);
       for (const leaf of leaves) {
@@ -261,12 +233,17 @@ export default class FleurDictPlugin extends Plugin {
         }
       }
 
+      // Refresh editor highlights
+      refreshAllEditorHighlights();
+      this.readingModeHandler?.refreshAllReadingViews();
+
       // Sync to Eudic if enabled
       if (this.settings.eudicEnabled && this.settings.eudicToken) {
         try {
           await this.eudicService.addWord(word, context);
           new Notice(`✓ "${word}" 已加入生词本并同步到欧路`);
         } catch (e) {
+          console.warn('FleurDict: Eudic sync failed for', word, e);
           const errMsg = e instanceof Error ? e.message : String(e);
           new Notice(`✓ "${word}" 已加入本地生词本（欧路同步失败：${errMsg}）`, 6000);
         }
@@ -335,14 +312,12 @@ export default class FleurDictPlugin extends Plugin {
       this.flashcardEngine,
       session,
       () => {
-        // Update callback - refresh wordbook view and editor highlights
+        // Update callback - refresh wordbook view if open
         const leaves = this.app.workspace.getLeavesOfType(WORDBOOK_VIEW_TYPE);
         if (leaves.length > 0) {
           const view = leaves[0].view as WordbookView;
           view.refresh();
         }
-        // Refresh editor highlights after review
-        refreshAllEditorHighlights(this);
       }
     );
     modal.open();

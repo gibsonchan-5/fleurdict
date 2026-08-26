@@ -6,7 +6,7 @@
 import { Plugin } from 'obsidian';
 import { DictionaryEntry, DictionaryResult, FleurDictSettings } from '../types';
 import { DictionaryEngine } from '../core/dictionary-engine';
-import { escapeHtml, setSafeHTML } from '../utils/helpers';
+import { escapeHtml } from '../utils/helpers';
 
 /**
  * Popup callback options
@@ -55,8 +55,8 @@ export class DictPopup {
    */
   private async savePopupRect(): Promise<void> {
     if (!this.container) return;
-    const left = this.container.offsetLeft;
-    const top = this.container.offsetTop;
+    const left = parseInt(this.container.style.left || '0', 10);
+    const top = parseInt(this.container.style.top || '0', 10);
     const width = this.container.offsetWidth;
     const height = this.container.offsetHeight;
     this.settings.popupLeft = left;
@@ -78,17 +78,13 @@ export class DictPopup {
     const l = this.settings.popupLeft;
     const t = this.settings.popupTop;
     const h = this.settings.popupHeight;
-    const styles: Partial<CSSStyleDeclaration> = {};
     if (l != null && t != null) {
-      styles.left = `${l}px`;
-      styles.top = `${t}px`;
+      this.container.style.left = `${l}px`;
+      this.container.style.top = `${t}px`;
     }
     // Restore saved height if available
     if (h != null && h > 0) {
-      styles.height = `${h}px`;
-    }
-    if (Object.keys(styles).length > 0) {
-      this.container.setCssStyles(styles);
+      this.container.style.height = `${h}px`;
     }
   }
 
@@ -100,6 +96,8 @@ export class DictPopup {
     const header = this.container.querySelector('.fleurdict-header-top') as HTMLElement;
     if (!header) return;
 
+    header.addClass('fleurdict-draggable-header');
+
     header.addEventListener('mousedown', (e) => {
       // Don't start drag if clicking close button
       if ((e.target as HTMLElement).closest('.fleurdict-close-btn')) return;
@@ -108,10 +106,11 @@ export class DictPopup {
       this.isDragging = true;
       this.dragStartX = e.clientX;
       this.dragStartY = e.clientY;
-      this.containerStartLeft = this.container!.offsetLeft;
-      this.containerStartTop = this.container!.offsetTop;
+      this.containerStartLeft = parseInt(this.container!.style.left || '0', 10);
+      this.containerStartTop = parseInt(this.container!.style.top || '0', 10);
       // Disable user select during drag for smoother following
-      document.body.addClass('fleurdict-dragging');
+      document.body.style.userSelect = 'none';
+      document.body.style.webkitUserSelect = 'none';
     });
   }
 
@@ -123,10 +122,8 @@ export class DictPopup {
       if (!this.isDragging || !this.container) return;
       const dx = e.clientX - this.dragStartX;
       const dy = e.clientY - this.dragStartY;
-      this.container.setCssStyles({
-        left: `${this.containerStartLeft + dx}px`,
-        top: `${this.containerStartTop + dy}px`
-      });
+      this.container.style.left = `${this.containerStartLeft + dx}px`;
+      this.container.style.top = `${this.containerStartTop + dy}px`;
     };
 
     const onDragUp = () => {
@@ -135,7 +132,8 @@ export class DictPopup {
         document.removeEventListener('mousemove', onDragMove);
         document.removeEventListener('mouseup', onDragUp);
         // Restore user select
-        document.body.removeClass('fleurdict-dragging');
+        document.body.style.userSelect = '';
+        document.body.style.webkitUserSelect = '';
         this.savePopupRect();
       }
     };
@@ -165,9 +163,7 @@ export class DictPopup {
         if (!this.isResizing || !this.container) return;
         const dy = moveEvent.clientY - this.resizeStartY;
         const newHeight = Math.max(300, this.containerStartHeight + dy);
-        this.container.setCssStyles({
-          height: `${newHeight}px`
-        });
+        this.container.style.height = `${newHeight}px`;
       };
 
       const onResizeUp = () => {
@@ -345,30 +341,15 @@ export class DictPopup {
     const content = document.createElement('div');
     content.addClass('fleurdict-popup-content');
 
-    // Build error popup using DOM methods
-    const header = document.createElement('div');
-    header.addClass('fleurdict-popup-header');
-
-    const wordEl = document.createElement('span');
-    wordEl.addClass('fleurdict-word');
-    wordEl.textContent = word;
-    header.appendChild(wordEl);
-
-    const errorEl = document.createElement('span');
-    errorEl.addClass('fleurdict-error');
-    errorEl.textContent = '未找到释义';
-    header.appendChild(errorEl);
-
-    const body = document.createElement('div');
-    body.addClass('fleurdict-popup-body');
-
-    const messageEl = document.createElement('p');
-    messageEl.addClass('fleurdict-error-message');
-    messageEl.textContent = message;
-    body.appendChild(messageEl);
-
-    content.appendChild(header);
-    content.appendChild(body);
+    content.innerHTML = `
+      <div class="fleurdict-popup-header">
+        <span class="fleurdict-word">${escapeHtml(word)}</span>
+        <span class="fleurdict-error">未找到释义</span>
+      </div>
+      <div class="fleurdict-popup-body">
+        <p class="fleurdict-error-message">${escapeHtml(message)}</p>
+      </div>
+    `;
 
     this.container.appendChild(content);
     document.body.appendChild(this.container);
@@ -393,7 +374,7 @@ export class DictPopup {
 
     const closeBtn = document.createElement('button');
     closeBtn.addClass('fleurdict-close-btn');
-    closeBtn.textContent = '\u00d7';
+    closeBtn.innerHTML = '&times;';
     closeBtn.addEventListener('click', () => {
       this.close();
     });
@@ -403,59 +384,42 @@ export class DictPopup {
 
     // Bottom: phonetics — each on its own line, aligned with word
     const firstEntry = results[0]?.entries[0];
-    const validPhonetics = (firstEntry?.phonetics ?? []).filter((p) => {
-      if (!p.text) return false;
-      const ipa = p.text.replace(/^[英美]\s*/, '').trim();
-      return ipa.length > 0;
-    });
-    if (firstEntry && this.settings.showPhonetic && validPhonetics.length > 0) {
+    if (firstEntry && this.settings.showPhonetic && firstEntry.phonetics.length > 0) {
       header.addClass('has-phonetics');
       const phoneticsContainer = document.createElement('div');
       phoneticsContainer.addClass('fleurdict-phonetics-col');
 
-      for (const phonetic of validPhonetics) {
+      for (const phonetic of firstEntry.phonetics) {
         const phoneticItem = document.createElement('div');
         phoneticItem.addClass('fleurdict-phonetic-item');
 
-        // Label: 英 or 美
-        const label = document.createElement('span');
-        label.addClass('fleurdict-phonetic-badge');
-        label.textContent = phonetic.text.startsWith('英') ? '英' : '美';
-        phoneticItem.appendChild(label);
+        if (phonetic.text) {
+          // Label: 英 or 美
+          const label = document.createElement('span');
+          label.addClass('fleurdict-phonetic-badge');
+          label.textContent = phonetic.text.startsWith('英') ? '英' : '美';
+          phoneticItem.appendChild(label);
 
-        // IPA text
-        const ipaText = phonetic.text.replace(/^[英美]\s*/, '');
-        const ipa = document.createElement('span');
-        ipa.addClass('fleurdict-phonetic-ipa');
-        ipa.textContent = ipaText;
-        phoneticItem.appendChild(ipa);
+          // IPA text
+          const ipaText = phonetic.text.replace(/^[英美]\s*/, '');
+          const ipa = document.createElement('span');
+          ipa.addClass('fleurdict-phonetic-ipa');
+          ipa.textContent = ipaText;
+          phoneticItem.appendChild(ipa);
 
-        if (this.settings.showAudioButton && phonetic.audio) {
-          // Speaker icon
-          const iconBtn = document.createElement('span');
-          iconBtn.addClass('fleurdict-play-icon');
-          iconBtn.setAttribute('role', 'button');
-          iconBtn.setAttribute('aria-label', phonetic.text.startsWith('英') ? '英式发音' : '美式发音');
-          const speakerSvg = iconBtn.createSvg('svg');
-          speakerSvg.setAttribute('width', '12');
-          speakerSvg.setAttribute('height', '12');
-          speakerSvg.setAttribute('viewBox', '0 0 24 24');
-          speakerSvg.setAttribute('fill', 'none');
-          speakerSvg.setAttribute('stroke', 'currentColor');
-          speakerSvg.setAttribute('stroke-width', '2.5');
-          speakerSvg.setAttribute('stroke-linecap', 'round');
-          speakerSvg.setAttribute('stroke-linejoin', 'round');
-          const spkPoly = speakerSvg.createSvg('polygon');
-          spkPoly.setAttribute('points', '11 5 6 9 2 9 2 15 6 15 11 19 11 5');
-          const spkPath1 = speakerSvg.createSvg('path');
-          spkPath1.setAttribute('d', 'M15.54 8.46a5 5 0 0 1 0 7.07');
-          const spkPath2 = speakerSvg.createSvg('path');
-          spkPath2.setAttribute('d', 'M19.07 4.93a10 10 0 0 1 0 14.14');
-          iconBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.playAudio(word, phonetic.audio);
-          });
-          phoneticItem.appendChild(iconBtn);
+          if (this.settings.showAudioButton && phonetic.audio) {
+            // Speaker icon
+            const iconBtn = document.createElement('span');
+            iconBtn.addClass('fleurdict-play-icon');
+            iconBtn.setAttribute('role', 'button');
+            iconBtn.setAttribute('aria-label', phonetic.text.startsWith('英') ? '英式发音' : '美式发音');
+            iconBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>';
+            iconBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              this.playAudio(word, phonetic.audio);
+            });
+            phoneticItem.appendChild(iconBtn);
+          }
         }
 
         phoneticsContainer.appendChild(phoneticItem);
@@ -475,9 +439,7 @@ export class DictPopup {
     body.addClass('fleurdict-popup-body');
 
     if (results.length === 0 || results[0].entries.length === 0) {
-      const noResult = body.createEl('p');
-      noResult.addClass('fleurdict-no-result');
-      noResult.textContent = '暂无释义';
+      body.innerHTML = '<p class="fleurdict-no-result">暂无释义</p>';
       return body;
     }
 
@@ -593,18 +555,7 @@ export class DictPopup {
       const aiBtn = document.createElement('button');
       aiBtn.addClass('fleurdict-action-btn');
       aiBtn.addClass('fleurdict-ai-btn');
-      const aiSvg = aiBtn.createSvg('svg');
-      aiSvg.setAttribute('width', '14');
-      aiSvg.setAttribute('height', '14');
-      aiSvg.setAttribute('viewBox', '0 0 24 24');
-      aiSvg.setAttribute('fill', 'none');
-      aiSvg.setAttribute('stroke', 'currentColor');
-      aiSvg.setAttribute('stroke-width', '2');
-      const aiPath1 = aiSvg.createSvg('path');
-      aiPath1.setAttribute('d', 'M12 2a10 10 0 1 0 10 10H12V2z');
-      const aiPath2 = aiSvg.createSvg('path');
-      aiPath2.setAttribute('d', 'M20 12a8 8 0 0 0-8-8v8h8z');
-      aiBtn.appendChild(document.createTextNode(' AI 详解'));
+      aiBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10H12V2z"></path><path d="M20 12a8 8 0 0 0-8-8v8h8z"></path></svg> AI 详解';
       aiBtn.addEventListener('click', () => {
         if (options.onAIDetail) {
           options.onAIDetail();
@@ -618,24 +569,7 @@ export class DictPopup {
       const addBtn = document.createElement('button');
       addBtn.addClass('fleurdict-action-btn');
       addBtn.addClass('fleurdict-add-btn');
-      const addSvg = addBtn.createSvg('svg');
-      addSvg.setAttribute('width', '14');
-      addSvg.setAttribute('height', '14');
-      addSvg.setAttribute('viewBox', '0 0 24 24');
-      addSvg.setAttribute('fill', 'none');
-      addSvg.setAttribute('stroke', 'currentColor');
-      addSvg.setAttribute('stroke-width', '2');
-      const addLine1 = addSvg.createSvg('line');
-      addLine1.setAttribute('x1', '12');
-      addLine1.setAttribute('y1', '5');
-      addLine1.setAttribute('x2', '12');
-      addLine1.setAttribute('y2', '19');
-      const addLine2 = addSvg.createSvg('line');
-      addLine2.setAttribute('x1', '5');
-      addLine2.setAttribute('y1', '12');
-      addLine2.setAttribute('x2', '19');
-      addLine2.setAttribute('y2', '12');
-      addBtn.appendChild(document.createTextNode(' 加入生词本'));
+      addBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> 加入生词本';
       addBtn.addEventListener('click', () => {
         if (options.onAddToWordbook) {
           options.onAddToWordbook();
@@ -644,26 +578,7 @@ export class DictPopup {
         addBtn.textContent = '✓ 已添加';
         addBtn.addClass('fleurdict-added');
         setTimeout(() => {
-          // Rebuild button content with DOM API
-          while (addBtn.firstChild) addBtn.removeChild(addBtn.firstChild);
-          const resetSvg = addBtn.createSvg('svg');
-          resetSvg.setAttribute('width', '14');
-          resetSvg.setAttribute('height', '14');
-          resetSvg.setAttribute('viewBox', '0 0 24 24');
-          resetSvg.setAttribute('fill', 'none');
-          resetSvg.setAttribute('stroke', 'currentColor');
-          resetSvg.setAttribute('stroke-width', '2');
-          const resetLine1 = resetSvg.createSvg('line');
-          resetLine1.setAttribute('x1', '12');
-          resetLine1.setAttribute('y1', '5');
-          resetLine1.setAttribute('x2', '12');
-          resetLine1.setAttribute('y2', '19');
-          const resetLine2 = resetSvg.createSvg('line');
-          resetLine2.setAttribute('x1', '5');
-          resetLine2.setAttribute('y1', '12');
-          resetLine2.setAttribute('x2', '19');
-          resetLine2.setAttribute('y2', '12');
-          addBtn.appendChild(document.createTextNode(' 加入生词本'));
+          addBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> 加入生词本';
           addBtn.removeClass('fleurdict-added');
         }, 2000);
       });
@@ -708,10 +623,8 @@ export class DictPopup {
       top = margin;
     }
 
-    this.container.setCssStyles({
-      left: `${left}px`,
-      top: `${top}px`
-    });
+    this.container.style.left = `${left}px`;
+    this.container.style.top = `${top}px`;
   }
 
   /**

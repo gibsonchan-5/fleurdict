@@ -62,13 +62,6 @@ export interface FleurDictSettings {
   // 生词本上下文模式（参考 FleurPilot）
   contextMode: 'active' | 'all' | 'custom' | 'none';
   contextPath: string; // 自定义选择的单个文件夹或笔记路径
-  contextPaths?: string[]; // 旧版多选路径（保留兼容，当前逻辑主要用 contextPath）
-
-  // 阅读模式
-  readingModeEnabled: boolean;
-
-  // 生词高亮
-  highlightEnabled: boolean;
 }
 
 export const DEFAULT_SETTINGS: FleurDictSettings = {
@@ -125,12 +118,6 @@ export const DEFAULT_SETTINGS: FleurDictSettings = {
   // 生词本上下文模式
   contextMode: 'active',
   contextPath: '',
-
-  // 阅读模式
-  readingModeEnabled: false,
-
-  // 生词高亮
-  highlightEnabled: true,
 };
 
 /**
@@ -229,9 +216,8 @@ export interface WordEntry {
   nextReview: number;
   easeFactor: number;
   interval: number;
-  // 分级系统字段
-  proficiency: number; // 0=陌生(红)，1=渐熟(黄)，2=熟悉(绿)，3=无标记
-  consecutiveCorrect: number; // 连续正确回答次数
+  proficiency: number;
+  consecutiveCorrect: number;
 }
 
 /**
@@ -271,8 +257,6 @@ export interface FlashcardSession {
 export type FlashcardMode = 'due' | 'category' | 'all' | 'random';
 
 /**
- * Flashcard Rating
- * 1 = 陌生 (forgot), 2 = 渐熟 (learning), 3 = 熟悉 (known)
- * null = skip (no rating)
+ * Flashcard Rating (SM-2)
  */
-export type FlashcardRating = 1 | 2 | 3;
+export type FlashcardRating = 0 | 1 | 2 | 3 | 4 | 5;

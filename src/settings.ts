@@ -30,7 +30,7 @@ export class FleurDictSettingTab extends PluginSettingTab {
     // Section 1: Dictionary Sources
     // =========================================================================
     const dictSection = containerEl.createDiv('fleurdict-settings-section');
-    new Setting(dictSection).setName('词典源设置').setHeading();
+    dictSection.createEl('h3', { text: '词典源设置', cls: 'fleurdict-settings-title' });
 
     dictSection.createEl('p', {
       text: '查词引擎优先使用有道词典（免费、无需配置，中文释义），无结果时自动切换英文词典。',
@@ -68,25 +68,21 @@ export class FleurDictSettingTab extends PluginSettingTab {
           })
       );
 
-    // --- 缓存策略 ---
-    new Setting(dictSection).setName('缓存策略').setHeading();
-
     new Setting(dictSection)
-      .setName('启用在线查询缓存')
-      .setDesc('开启后，在线词典的查询结果会缓存在本地，短期内相同单词不再重复请求（推荐开启，可大幅减少网络请求）')
+      .setName('启用缓存')
+      .setDesc('缓存在线词典查询结果，减少重复请求')
       .addToggle((toggle) => {
         toggle
           .setValue(this.plugin.settings.cacheEnabled)
           .onChange(async (value) => {
             this.plugin.settings.cacheEnabled = value;
             await this.plugin.saveSettings();
-            new Notice(value ? '✓ 已开启在线查询缓存' : '已关闭在线查询缓存，每次查词均实时请求');
           });
       });
 
     new Setting(dictSection)
       .setName('缓存有效期')
-      .setDesc('缓存数据的保留天数，过期后自动清除')
+      .setDesc('缓存数据的保留天数')
       .addSlider((slider) => {
         slider
           .setLimits(1, 30, 1)
@@ -116,7 +112,7 @@ export class FleurDictSettingTab extends PluginSettingTab {
     // Section 2: Eudic Sync (欧路词典同步)
     // =========================================================================
     const eudicSection = containerEl.createDiv('fleurdict-settings-section');
-    new Setting(eudicSection).setName('欧路词典同步').setHeading();
+    eudicSection.createEl('h3', { text: '欧路词典同步', cls: 'fleurdict-settings-title' });
 
     eudicSection.createEl('p', {
       text: '将 Obsidian 生词本与欧路词典 App 双向同步。获取 Token：欧路词典官网 → 个人中心 → 开放 API。',
@@ -267,7 +263,7 @@ export class FleurDictSettingTab extends PluginSettingTab {
     // Section 3: AI Settings
     // =========================================================================
     const aiSection = containerEl.createDiv('fleurdict-settings-section');
-    new Setting(aiSection).setName('AI 设置').setHeading();
+    aiSection.createEl('h3', { text: 'AI 设置', cls: 'fleurdict-settings-title' });
 
     new Setting(aiSection)
       .setName('AI Provider')
@@ -403,7 +399,7 @@ export class FleurDictSettingTab extends PluginSettingTab {
     // Section 4: Wordbook Settings
     // =========================================================================
     const wbSection = containerEl.createDiv('fleurdict-settings-section');
-    new Setting(wbSection).setName('生词本设置').setHeading();
+    wbSection.createEl('h3', { text: '生词本设置', cls: 'fleurdict-settings-title' });
 
     new Setting(wbSection)
       .setName('自动提示加入生词本')
@@ -472,7 +468,7 @@ export class FleurDictSettingTab extends PluginSettingTab {
     // Section 5: Flashcard Settings
     // =========================================================================
     const fcSection = containerEl.createDiv('fleurdict-settings-section');
-    new Setting(fcSection).setName('闪卡设置').setHeading();
+    fcSection.createEl('h3', { text: '闪卡设置', cls: 'fleurdict-settings-title' });
 
     new Setting(fcSection)
       .setName('每日新卡上限')
@@ -534,7 +530,7 @@ export class FleurDictSettingTab extends PluginSettingTab {
     // Section 6: Appearance & Shortcuts
     // =========================================================================
     const uiSection = containerEl.createDiv('fleurdict-settings-section');
-    new Setting(uiSection).setName('外观与快捷键').setHeading();
+    uiSection.createEl('h3', { text: '外观与快捷键', cls: 'fleurdict-settings-title' });
 
     new Setting(uiSection)
       .setName('弹窗位置')
@@ -633,90 +629,6 @@ export class FleurDictSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           });
       });
-
-    // Reading mode is auto-detected: when user switches to Obsidian's preview mode,
-    // the right-click menu automatically shows only FleurDict functions.
-    // No toggle needed.
-
-    // =========================================================================
-    // Section 6.5: Highlight Control
-    // =========================================================================
-    const highlightSection = containerEl.createDiv('fleurdict-settings-section');
-    new Setting(highlightSection).setName('生词高亮控制').setHeading();
-
-    highlightSection.createEl('p', {
-      text: '全局开关：关闭后所有笔记（编辑模式与阅读模式）都不再高亮生词，不影响生词本数据。',
-      cls: 'fleurdict-settings-desc',
-    });
-
-    new Setting(highlightSection)
-      .setName('启用生词高亮')
-      .setDesc('关闭后所有笔记（编辑与阅读模式）都不再高亮生词（不影响生词本数据）')
-      .addToggle((toggle) => {
-        toggle
-          .setValue(this.plugin.settings.highlightEnabled)
-          .onChange(async (value) => {
-            this.plugin.settings.highlightEnabled = value;
-            await this.plugin.saveSettings();
-            // Trigger refresh on all editors
-            const { refreshAllEditorHighlights } = await import('./features/word-highlighter');
-            refreshAllEditorHighlights(this.plugin);
-            // Also refresh reading-mode views to apply/remove highlights
-            (this.plugin as any).readingModeHandler?.refreshAllReadingViews?.();
-            new Notice(value ? '✓ 已启用生词高亮' : '已关闭生词高亮');
-          });
-      });
-
-    // =========================================================================
-    // 数据来源与免责声明（放在最末尾）
-    // =========================================================================
-    const disclaimerContainer = containerEl.createDiv('fleurdict-disclaimer');
-    new Setting(disclaimerContainer).setName('数据来源与免责声明').setHeading();
-
-    const disclaimerText = disclaimerContainer.createEl('div', {
-      cls: 'fleurdict-disclaimer-text',
-    });
-
-    disclaimerText.createEl('p', {
-      text: '本插件使用的词典数据来源：',
-    });
-
-    const sourceList = disclaimerText.createEl('ul');
-    sourceList.createEl('li', {
-      text: '有道词典：提供英汉/汉英词典查询服务，数据来源于网易有道词典网页版接口',
-    });
-    sourceList.createEl('li', {
-      text: 'Free Dictionary API：提供英文释义，数据来源于 Wiktionary（CC BY-SA 4.0 许可证）',
-    });
-    sourceList.createEl('li', {
-      text: '欧路词典 API：用于生词本同步，用户需自行提供授权 Token',
-    });
-
-    disclaimerText.createEl('p', {
-      text: '免责声明：',
-      cls: 'fleurdict-disclaimer-warning',
-    });
-
-    const warningList = disclaimerText.createEl('ul', {
-      cls: 'fleurdict-disclaimer-warning-list',
-    });
-    warningList.createEl('li', {
-      text: '本插件仅供个人学习使用，不得用于商业用途',
-    });
-    warningList.createEl('li', {
-      text: '词典数据版权归原作者或机构所有，插件开发者不拥有相关数据权利',
-    });
-    warningList.createEl('li', {
-      text: '如相关数据提供方认为本插件侵犯其权益，请联系开发者处理',
-    });
-    warningList.createEl('li', {
-      text: '使用本插件即表示您同意遵守各数据提供方的服务条款',
-    });
-
-    disclaimerText.createEl('p', {
-      text: '本项目为开源项目，遵循 MIT 许可证。',
-      cls: 'fleurdict-disclaimer-footer',
-    });
   }
 
   /**

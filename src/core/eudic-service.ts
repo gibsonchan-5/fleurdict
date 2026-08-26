@@ -90,6 +90,7 @@ export class EudicService {
       if (err.message?.includes('欧路 API 错误')) throw err;
       const status = err?.status || err?.response?.status || 'unknown';
       const detail = err?.message || JSON.stringify(err);
+      console.error('[FleurDict-DIAG] Eudic API request failed:', detail);
       throw new Error(`欧路 API 错误 (${status}): ${detail}`);
     }
   }
@@ -188,6 +189,7 @@ export class EudicService {
         language: this.settings.eudicLanguage,
         words: [word],
       });
+      console.log(`FleurDict: Added word "${word}" to Eudic`);
     } catch (error) {
       console.error('FleurDict: Failed to add word to Eudic:', error);
       throw error;
@@ -206,7 +208,8 @@ export class EudicService {
         language: this.settings.eudicLanguage,
         words,
       };
-      await this.request('/studylist/words', 'POST', body);
+      const result = await this.request('/studylist/words', 'POST', body);
+      console.log(`FleurDict: Added ${words.length} words to Eudic`);
     } catch (error) {
       console.error('FleurDict: Failed to batch add words to Eudic:', error);
       throw error;
@@ -223,6 +226,7 @@ export class EudicService {
         language: this.settings.eudicLanguage,
         words: [word],
       });
+      console.log(`FleurDict: Deleted word "${word}" from Eudic`);
     } catch (error) {
       console.error('FleurDict: Failed to delete word from Eudic:', error);
       throw error;
@@ -282,25 +286,35 @@ export class EudicService {
     }
 
     try {
+      console.log('[FleurDict-DIAG] syncLocalToEudic called with', localWords.length, 'words:', localWords);
+      console.log('[FleurDict-DIAG] eudicCategoryId:', this.settings.eudicCategoryId);
+      console.log('[FleurDict-DIAG] eudicLanguage:', this.settings.eudicLanguage);
+
       // 获取欧路现有单词（取全部，分页循环）
       let eudicWords: EudicWord[] = [];
       let page = 0;
       const pageSize = 100;
       while (true) {
         const batch = await this.getWords(this.settings.eudicCategoryId || '0', page, pageSize);
+        console.log('[FleurDict-DIAG] Eudic page', page, 'returned', batch.length, 'words');
         eudicWords = eudicWords.concat(batch);
         if (batch.length < pageSize) break;
         page++;
       }
 
       const eudicWordSet = new Set(eudicWords.map(w => w.word.toLowerCase()));
+      console.log('[FleurDict-DIAG] Eudic total words:', eudicWords.length);
+      console.log('[FleurDict-DIAG] Eudic first 10 words:', JSON.stringify(eudicWords.slice(0, 10).map(w => w.word)));
+      console.log('[FleurDict-DIAG] Local words sample:', JSON.stringify(localWords.slice(0, 10)));
 
       // 找出需要同步的单词
       const toSync = localWords.filter(
         w => !eudicWordSet.has(w.toLowerCase())
       );
+      console.log('[FleurDict-DIAG] Words to sync:', toSync.length, JSON.stringify(toSync.slice(0, 10)));
 
       if (toSync.length === 0) {
+        console.log('[FleurDict-DIAG] Nothing to sync - all local words already in Eudic');
         return { added: 0, failed: 0 };
       }
 
@@ -315,12 +329,15 @@ export class EudicService {
           await this.addWords(batch);
           added += batch.length;
         } catch (error) {
+          console.error('[FleurDict-DIAG] Failed to sync batch:', error);
           failed += batch.length;
         }
       }
 
+      console.log('[FleurDict-DIAG] Sync result: added=' + added + ', failed=' + failed);
       return { added, failed };
     } catch (error) {
+      console.error('[FleurDict-DIAG] Failed to sync to Eudic:', error);
       throw error;
     }
   }
