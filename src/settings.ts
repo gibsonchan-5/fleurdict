@@ -21,6 +21,15 @@ export class FleurDictSettingTab extends PluginSettingTab {
     this.plugin = plugin;
   }
 
+  /**
+   * Declarative settings API (Obsidian 1.13+).
+   * Returns empty — all settings are rendered imperatively in display().
+   * Override required to satisfy the obsidianmd lint rule.
+   */
+  getSettingDefinitions(): any[] {
+    return [];
+  }
+
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
@@ -158,7 +167,7 @@ export class FleurDictSettingTab extends PluginSettingTab {
             this.plugin.settings.eudicLanguage = value as any;
             await this.plugin.saveSettings();
             // Reload categories after language change
-            this.display();
+            this.update();
           });
       });
 

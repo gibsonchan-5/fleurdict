@@ -309,8 +309,7 @@ export class ReadingModeHandler {
       if (start > lastEnd) {
         fragment.appendChild(document.createTextNode(text.slice(lastEnd, start)));
       }
-      const span = document.createElement('span');
-      span.className = `fleurdict-hl ${cls}`;
+      const span = document.body.createSpan(`fleurdict-hl ${cls}`);
       span.textContent = text.slice(start, end);
       fragment.appendChild(span);
       lastEnd = end;
