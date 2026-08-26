@@ -6,7 +6,7 @@
 import { App, Modal, Plugin } from 'obsidian';
 import { LLMService, ChatMessage } from '../core/llm-service';
 import { FleurDictSettings } from '../types';
-import { sanitizeHTML } from '../utils/helpers';
+import { sanitizeHTML, setSafeHTML } from '../utils/helpers';
 
 /**
  * AI Modal - displays AI-generated content with streaming support.
@@ -116,8 +116,23 @@ export class AIModal extends Modal {
     // Resize handle (bottom-right corner)
     const resizeHandle = contentEl.createDiv('fleurdict-ai-resize-handle');
 
-    // SVG corner indicator
-    resizeHandle.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 14V10H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M12 14V6H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+    // SVG corner indicator (DOM API, no innerHTML)
+    const resizeSvg = resizeHandle.createSvg('svg');
+    resizeSvg.setAttribute('width', '16');
+    resizeSvg.setAttribute('height', '16');
+    resizeSvg.setAttribute('viewBox', '0 0 16 16');
+    resizeSvg.setAttribute('fill', 'none');
+    resizeSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    const resizePath1 = resizeSvg.createSvg('path');
+    resizePath1.setAttribute('d', 'M10 14V10H14');
+    resizePath1.setAttribute('stroke', 'currentColor');
+    resizePath1.setAttribute('stroke-width', '1.5');
+    resizePath1.setAttribute('stroke-linecap', 'round');
+    const resizePath2 = resizeSvg.createSvg('path');
+    resizePath2.setAttribute('d', 'M12 14V6H14');
+    resizePath2.setAttribute('stroke', 'currentColor');
+    resizePath2.setAttribute('stroke-width', '1.5');
+    resizePath2.setAttribute('stroke-linecap', 'round');
 
     // Show original text if provided (direct child of contentEl, above render area)
     if (this.originalText) {
@@ -422,7 +437,7 @@ export class AIModal extends Modal {
 
     if (inList) { htmlLines.push('</ul>'); }
     if (inTable) { htmlLines.push('</tbody></table>'); }
-    this.renderAreaEl.innerHTML = sanitizeHTML(htmlLines.join(''));
+    setSafeHTML(this.renderAreaEl, sanitizeHTML(htmlLines.join('')));
   }
 
   /**

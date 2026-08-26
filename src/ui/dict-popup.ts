@@ -6,7 +6,7 @@
 import { Plugin } from 'obsidian';
 import { DictionaryEntry, DictionaryResult, FleurDictSettings } from '../types';
 import { DictionaryEngine } from '../core/dictionary-engine';
-import { escapeHtml } from '../utils/helpers';
+import { escapeHtml, setSafeHTML } from '../utils/helpers';
 
 /**
  * Popup callback options
@@ -393,7 +393,7 @@ export class DictPopup {
 
     const closeBtn = document.createElement('button');
     closeBtn.addClass('fleurdict-close-btn');
-    closeBtn.innerHTML = '&times;';
+    closeBtn.textContent = '\u00d7';
     closeBtn.addEventListener('click', () => {
       this.close();
     });
@@ -436,7 +436,21 @@ export class DictPopup {
           iconBtn.addClass('fleurdict-play-icon');
           iconBtn.setAttribute('role', 'button');
           iconBtn.setAttribute('aria-label', phonetic.text.startsWith('英') ? '英式发音' : '美式发音');
-          iconBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>';
+          const speakerSvg = iconBtn.createSvg('svg');
+          speakerSvg.setAttribute('width', '12');
+          speakerSvg.setAttribute('height', '12');
+          speakerSvg.setAttribute('viewBox', '0 0 24 24');
+          speakerSvg.setAttribute('fill', 'none');
+          speakerSvg.setAttribute('stroke', 'currentColor');
+          speakerSvg.setAttribute('stroke-width', '2.5');
+          speakerSvg.setAttribute('stroke-linecap', 'round');
+          speakerSvg.setAttribute('stroke-linejoin', 'round');
+          const spkPoly = speakerSvg.createSvg('polygon');
+          spkPoly.setAttribute('points', '11 5 6 9 2 9 2 15 6 15 11 19 11 5');
+          const spkPath1 = speakerSvg.createSvg('path');
+          spkPath1.setAttribute('d', 'M15.54 8.46a5 5 0 0 1 0 7.07');
+          const spkPath2 = speakerSvg.createSvg('path');
+          spkPath2.setAttribute('d', 'M19.07 4.93a10 10 0 0 1 0 14.14');
           iconBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             this.playAudio(word, phonetic.audio);
@@ -461,7 +475,9 @@ export class DictPopup {
     body.addClass('fleurdict-popup-body');
 
     if (results.length === 0 || results[0].entries.length === 0) {
-      body.innerHTML = '<p class="fleurdict-no-result">暂无释义</p>';
+      const noResult = body.createEl('p');
+      noResult.addClass('fleurdict-no-result');
+      noResult.textContent = '暂无释义';
       return body;
     }
 
@@ -577,7 +593,18 @@ export class DictPopup {
       const aiBtn = document.createElement('button');
       aiBtn.addClass('fleurdict-action-btn');
       aiBtn.addClass('fleurdict-ai-btn');
-      aiBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10H12V2z"></path><path d="M20 12a8 8 0 0 0-8-8v8h8z"></path></svg> AI 详解';
+      const aiSvg = aiBtn.createSvg('svg');
+      aiSvg.setAttribute('width', '14');
+      aiSvg.setAttribute('height', '14');
+      aiSvg.setAttribute('viewBox', '0 0 24 24');
+      aiSvg.setAttribute('fill', 'none');
+      aiSvg.setAttribute('stroke', 'currentColor');
+      aiSvg.setAttribute('stroke-width', '2');
+      const aiPath1 = aiSvg.createSvg('path');
+      aiPath1.setAttribute('d', 'M12 2a10 10 0 1 0 10 10H12V2z');
+      const aiPath2 = aiSvg.createSvg('path');
+      aiPath2.setAttribute('d', 'M20 12a8 8 0 0 0-8-8v8h8z');
+      aiBtn.appendChild(document.createTextNode(' AI 详解'));
       aiBtn.addEventListener('click', () => {
         if (options.onAIDetail) {
           options.onAIDetail();
@@ -591,7 +618,24 @@ export class DictPopup {
       const addBtn = document.createElement('button');
       addBtn.addClass('fleurdict-action-btn');
       addBtn.addClass('fleurdict-add-btn');
-      addBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> 加入生词本';
+      const addSvg = addBtn.createSvg('svg');
+      addSvg.setAttribute('width', '14');
+      addSvg.setAttribute('height', '14');
+      addSvg.setAttribute('viewBox', '0 0 24 24');
+      addSvg.setAttribute('fill', 'none');
+      addSvg.setAttribute('stroke', 'currentColor');
+      addSvg.setAttribute('stroke-width', '2');
+      const addLine1 = addSvg.createSvg('line');
+      addLine1.setAttribute('x1', '12');
+      addLine1.setAttribute('y1', '5');
+      addLine1.setAttribute('x2', '12');
+      addLine1.setAttribute('y2', '19');
+      const addLine2 = addSvg.createSvg('line');
+      addLine2.setAttribute('x1', '5');
+      addLine2.setAttribute('y1', '12');
+      addLine2.setAttribute('x2', '19');
+      addLine2.setAttribute('y2', '12');
+      addBtn.appendChild(document.createTextNode(' 加入生词本'));
       addBtn.addEventListener('click', () => {
         if (options.onAddToWordbook) {
           options.onAddToWordbook();
@@ -600,7 +644,26 @@ export class DictPopup {
         addBtn.textContent = '✓ 已添加';
         addBtn.addClass('fleurdict-added');
         setTimeout(() => {
-          addBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> 加入生词本';
+          // Rebuild button content with DOM API
+          while (addBtn.firstChild) addBtn.removeChild(addBtn.firstChild);
+          const resetSvg = addBtn.createSvg('svg');
+          resetSvg.setAttribute('width', '14');
+          resetSvg.setAttribute('height', '14');
+          resetSvg.setAttribute('viewBox', '0 0 24 24');
+          resetSvg.setAttribute('fill', 'none');
+          resetSvg.setAttribute('stroke', 'currentColor');
+          resetSvg.setAttribute('stroke-width', '2');
+          const resetLine1 = resetSvg.createSvg('line');
+          resetLine1.setAttribute('x1', '12');
+          resetLine1.setAttribute('y1', '5');
+          resetLine1.setAttribute('x2', '12');
+          resetLine1.setAttribute('y2', '19');
+          const resetLine2 = resetSvg.createSvg('line');
+          resetLine2.setAttribute('x1', '5');
+          resetLine2.setAttribute('y1', '12');
+          resetLine2.setAttribute('x2', '19');
+          resetLine2.setAttribute('y2', '12');
+          addBtn.appendChild(document.createTextNode(' 加入生词本'));
           addBtn.removeClass('fleurdict-added');
         }, 2000);
       });
