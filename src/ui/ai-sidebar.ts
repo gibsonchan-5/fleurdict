@@ -117,7 +117,7 @@ export class AISidebarView extends ItemView {
     const buttonRow = inputArea.createDiv('fleurdict-button-row');
     this.sendBtn = buttonRow.createEl('button', { cls: 'fleurdict-send-btn mod-cta' });
     this.sendBtn.setText('发送');
-    this.sendBtn.addEventListener('click', () => void this.sendMessage());
+    this.sendBtn.addEventListener('click', () => this.sendMessage());
 
     const stopBtn = buttonRow.createEl('button', { cls: 'fleurdict-stop-btn' });
     stopBtn.setText('停止');
@@ -222,7 +222,7 @@ export class AISidebarView extends ItemView {
    * Add a message to the chat UI
    */
   private addMessage(role: 'user' | 'assistant', content: string, streaming = false): HTMLElement {
-    if (!this.chatContainer) return document.body.createDiv();
+    if (!this.chatContainer) return document.createElement('div');
 
     const msgEl = this.chatContainer.createDiv(`fleurdict-message fleurdict-message-${role}`);
 

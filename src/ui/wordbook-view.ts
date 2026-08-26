@@ -259,13 +259,15 @@ export class WordbookView extends ItemView {
 
     const actionsEl = headerEl.createEl('div', { cls: 'fleurdict-wordbook-actions' });
 
-    const reviewBtn = actionsEl.createEl('button');
+    const reviewBtn = document.createElement('button');
     reviewBtn.textContent = '开始复习';
     reviewBtn.addEventListener('click', () => this.startReview());
+    actionsEl.appendChild(reviewBtn);
 
-    const exportBtn = actionsEl.createEl('button');
+    const exportBtn = document.createElement('button');
     exportBtn.textContent = '导出';
-    exportBtn.addEventListener('click', () => void this.exportWordbook());
+    exportBtn.addEventListener('click', () => this.exportWordbook());
+    actionsEl.appendChild(exportBtn);
   }
 
   /**
@@ -523,20 +525,25 @@ export class WordbookView extends ItemView {
     // Action buttons
     const actionsEl = entryEl.createEl('div', { cls: 'fleurdict-wordbook-entry-actions' });
 
-    const editBtn = actionsEl.createEl('button');
+    const editBtn = document.createElement('button');
     setIcon(editBtn, 'pencil');
     editBtn.setAttribute('aria-label', '编辑');
     editBtn.addEventListener('click', () => this.openEditModal(entry));
+    actionsEl.appendChild(editBtn);
 
-    const deleteBtn = actionsEl.createEl('button');
+    const deleteBtn = document.createElement('button');
     setIcon(deleteBtn, 'trash');
     deleteBtn.setAttribute('aria-label', '删除');
-    deleteBtn.addEventListener('click', () => void this.deleteEntry(entry));
+    deleteBtn.addEventListener('click', async () => {
+      await this.deleteEntry(entry);
+    });
+    actionsEl.appendChild(deleteBtn);
 
-    const reviewBtn = actionsEl.createEl('button');
+    const reviewBtn = document.createElement('button');
     setIcon(reviewBtn, 'sparkles');
     reviewBtn.setAttribute('aria-label', 'AI 详解');
-    reviewBtn.addEventListener('click', () => void this.aiDetail(entry));
+    reviewBtn.addEventListener('click', () => this.aiDetail(entry));
+    actionsEl.appendChild(reviewBtn);
 
     return meaningEl;
   }
