@@ -205,6 +205,8 @@ export interface WordEntry {
   category: string;
   meaning: string;
   phonetic: string;
+  phoneticUK?: string;
+  phoneticUS?: string;
   audioUrlUK?: string;
   audioUrlUS?: string;
   source?: string;

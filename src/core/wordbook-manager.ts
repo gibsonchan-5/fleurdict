@@ -81,7 +81,9 @@ export class WordbookManager {
     context?: string,
     category?: string,
     audioUrlUK?: string,
-    audioUrlUS?: string
+    audioUrlUS?: string,
+    phoneticUK?: string,
+    phoneticUS?: string
   ): Promise<WordEntry> {
     const normalizedWord = normalizeWord(word);
     const type = isPhrase(normalizedWord) ? 'phrase' : 'word';
@@ -99,6 +101,8 @@ export class WordbookManager {
       category: category || this.settings.defaultCategory,
       meaning,
       phonetic,
+      phoneticUK,
+      phoneticUS,
       audioUrlUK,
       audioUrlUS,
       source: this.plugin.app.workspace.getActiveFile()?.path,

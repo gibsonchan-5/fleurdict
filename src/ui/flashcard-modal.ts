@@ -132,9 +132,17 @@ export class FlashcardModal extends Modal {
       // Audio row: play button + phonetic text
       const audioRowEl = frontEl.createEl('div', { cls: 'fleurdict-flashcard-audio-row' });
 
-      if (this.currentCard.phonetic) {
+      // Show phonetic matching user's audio preference
+      const preferUS = this.settings.audioPreference === 'us';
+      let displayPhonetic = preferUS
+        ? (this.currentCard.phoneticUS || this.currentCard.phonetic)
+        : (this.currentCard.phoneticUK || this.currentCard.phonetic);
+      // Strip leading 英/美 label — we only show the IPA
+      displayPhonetic = (displayPhonetic || '').replace(/^[英美]\s*/, '');
+
+      if (displayPhonetic) {
         audioRowEl.createEl('span', {
-          text: this.currentCard.phonetic,
+          text: displayPhonetic,
           cls: 'fleurdict-flashcard-phonetic',
         });
       }
