@@ -62,12 +62,16 @@ export class ReadingModeHandler {
       this.selectionHandler.lookupWord(word);
     };
 
-    // 右键菜单拦截（仅预览模式下）
+    // 右键菜单拦截（仅预览模式下，且用户开启了阅读模式右键菜单）
     this.contextmenuHandler = (evt: MouseEvent) => {
       const target = evt.target as HTMLElement;
       if (!target?.closest('.markdown-preview-view, .markdown-reading-view')) return;
 
       if (!this.isPreviewMode()) return;
+
+      // 检查用户是否开启了阅读模式右键菜单
+      const settings = (this.plugin as any).settings;
+      if (!settings?.readingModeContextMenu) return;
 
       // 获取文本：优先选中文本，其次点击位置的单词
       let text: string | null = null;
