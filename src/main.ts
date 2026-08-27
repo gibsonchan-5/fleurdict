@@ -208,7 +208,8 @@ export default class FleurDictPlugin extends Plugin {
 
       if (results.length > 0 && results[0].entries.length > 0) {
         const entry = results[0].entries[0];
-        meaning = DictionaryEngine.getFirstDefinition(entry);
+        // Use getAllDefinitions to preserve POS tags (e.g. "noun 网格，方格")
+        meaning = DictionaryEngine.getAllDefinitions(entry);
         phonetic = DictionaryEngine.getPhonetic(entry);
         // Extract UK/US audio URLs from phonetics
         for (const p of entry.phonetics) {
