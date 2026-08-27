@@ -440,6 +440,11 @@ export class WordbookView extends ItemView {
       existingList.remove();
     }
 
+    // Save current sidebar scroll position before DOM rebuild
+    // (mirrors FleurPDF's refresh() pattern)
+    const scrollEl = (this.contentEl?.closest('.view-content') ?? this.contentEl) as HTMLElement | null;
+    const scrollTop = scrollEl?.scrollTop ?? 0;
+
     const listEl = container.createEl('div', { cls: 'fleurdict-wordbook-list' });
 
     const data = this.wordbookManager.getData();
@@ -488,6 +493,12 @@ export class WordbookView extends ItemView {
         // keep stored meaning
       }
     }
+
+    // Restore scroll position after DOM rebuild (mirrors FleurPDF pattern)
+    requestAnimationFrame(() => {
+      const newScrollEl = (this.contentEl?.closest('.view-content') ?? this.contentEl) as HTMLElement | null;
+      if (newScrollEl) newScrollEl.scrollTop = scrollTop;
+    });
   }
 
   /**
@@ -570,9 +581,6 @@ export class WordbookView extends ItemView {
       }
       container.appendChild(document.createTextNode(def));
     }
-
-    // Add expand toggle if content is long
-    this.maybeAddExpandToggle(container);
   }
 
   /**
@@ -586,49 +594,6 @@ export class WordbookView extends ItemView {
       'auxiliary': 'aux.', 'modal': 'modal',
     };
     return map[pos.toLowerCase()] || pos;
-  }
-
-  /**
-   * Add a "展开/收起" toggle button AFTER the meaning container (as a sibling).
-   * Only shows when content actually exceeds 3 lines (truncated by line-clamp).
-   * Uses a hidden sibling clone to measure full height vs clamped height.
-   */
-  private maybeAddExpandToggle(meaningContainer: HTMLElement) {
-    const parent = meaningContainer.parentElement;
-    if (!parent) return;
-    if (parent.querySelector('.fleurdict-expand-toggle')) return;
-
-    // Measure full (unclamped) height using a hidden sibling clone
-    const clone = meaningContainer.cloneNode(true) as HTMLElement;
-    Object.assign(clone.style, {
-      position: 'absolute',
-      visibility: 'hidden',
-      width: `${meaningContainer.offsetWidth}px`,
-      overflow: 'visible',
-      webkitLineClamp: 'unset',
-      maxHeight: 'none',
-      height: 'auto',
-      display: 'block',
-    });
-    clone.classList.remove('fleurdict-expanded');
-    parent.appendChild(clone);
-    const fullHeight = clone.scrollHeight;
-    clone.remove();
-
-    // Estimate clamped height: 3 lines × lineHeight
-    const lineHeight = parseFloat(getComputedStyle(meaningContainer).lineHeight) || 20;
-    const clampedHeight = lineHeight * 3;
-
-    if (fullHeight <= clampedHeight + 2) return; // content fits within 3 lines
-
-    const toggleBtn = parent.createEl('span', { text: '展开', cls: 'fleurdict-expand-toggle' });
-    meaningContainer.insertAdjacentElement('afterend', toggleBtn);
-
-    toggleBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const isExpanded = meaningContainer.classList.toggle('fleurdict-expanded');
-      toggleBtn.textContent = isExpanded ? '收起' : '展开';
-    });
   }
 
   /**
@@ -669,9 +634,6 @@ export class WordbookView extends ItemView {
         container.appendChild(document.createTextNode(part));
       }
     }
-
-    // Add expand toggle if content is long
-    this.maybeAddExpandToggle(container);
   }
 
   /**
