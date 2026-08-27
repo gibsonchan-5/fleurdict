@@ -1481,15 +1481,17 @@ body.fleurdict-dragging {
   height: 32px;
   padding: 0 18px;
   border-radius: 8px;
-  border: 1px solid var(--fleurdict-border-subtle);
-  background: var(--fleurdict-bg-elevated);
-  color: var(--fleurdict-text-secondary);
+  border: 1px solid var(--fleurdict-border-subtle) !important;
+  background: var(--fleurdict-bg-elevated) !important;
+  color: var(--fleurdict-text-secondary) !important;
   font-size: 13px;
   font-weight: 500;
   letter-spacing: 0.01em;
   cursor: pointer;
   transition: all 0.15s var(--fleurdict-ease);
   white-space: nowrap;
+  box-shadow: none !important;
+  outline: none !important;
 }
 
 .fleurdict-ai-buttons button:hover:not(:disabled) {
@@ -2082,10 +2084,6 @@ body.fleurdict-dragging {
   color: var(--fleurdict-text-secondary);
   line-height: 1.65;
   margin-bottom: 2px;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
 /* POS tag — small inline label for part-of-speech (noun, verb, adj., etc.) */
@@ -2102,28 +2100,6 @@ body.fleurdict-dragging {
   text-transform: lowercase;
   line-height: 1.6;
   letter-spacing: 0.02em;
-}
-
-/* Expand/collapse toggle for wordbook meanings */
-.fleurdict-expand-toggle {
-  display: inline-block;
-  font-size: 11px;
-  color: var(--fleurdict-primary);
-  cursor: pointer;
-  margin-left: 4px;
-  vertical-align: middle;
-  user-select: none;
-  opacity: 0.7;
-  transition: opacity 0.15s ease;
-}
-.fleurdict-expand-toggle:hover {
-  opacity: 1;
-  text-decoration: underline;
-}
-
-.fleurdict-wordbook-meaning.fleurdict-expanded {
-  -webkit-line-clamp: unset !important;
-  max-height: none;
 }
 
 .fleurdict-wordbook-context {
