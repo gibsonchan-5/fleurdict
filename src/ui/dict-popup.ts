@@ -263,22 +263,42 @@ export class DictPopup {
       this.overlay.remove();
       this.overlay = null;
     }
+    // Remove document event listener if it exists
+    if (this.outsideClickHandler) {
+      document.removeEventListener('mousedown', this.outsideClickHandler, true);
+      this.outsideClickHandler = null;
+    }
     this.visible = false;
   }
 
   /**
-   * Create background overlay (transparent, for click-outside-to-close)
+   * Create background overlay (transparent, for click-outside-to-close).
+   *
+   * Strategy: Use document-level mousedown in CAPTURE phase.
+   * This fires BEFORE Obsidian's bubble-phase handlers (e.g. reading view
+   * click handlers that position the cursor). By checking if the click
+   * target is inside the popup, we can close immediately on the first click.
+   *
+   * The overlay div is kept for visual purposes (it covers the screen area
+   * not covered by the popup, preventing interaction with underlying content
+   * while the popup is open) but the actual close logic uses the document handler.
    */
   private createOverlay(): void {
     this.overlay = document.createElement('div');
     this.overlay.addClass('fleurdict-overlay');
-    this.overlay.addEventListener('click', (e) => {
-      // Only close if clicking the overlay itself, not its children
-      if (e.target === this.overlay) {
-        this.close();
-      }
-    });
     document.body.appendChild(this.overlay);
+
+    // Capture-phase mousedown on document — fires before ANY bubble-phase handler
+    this.outsideClickHandler = (e: MouseEvent) => {
+      // Don't close if clicking inside the popup
+      if (this.container && this.container.contains(e.target as Node)) return;
+      // Close the popup
+      this.close();
+      // Prevent Obsidian from processing this click (e.g. cursor positioning)
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    };
+    document.addEventListener('mousedown', this.outsideClickHandler, true);
   }
 
   /**
@@ -568,7 +588,8 @@ export class DictPopup {
       aiBtn.addClass('fleurdict-action-btn');
       aiBtn.addClass('fleurdict-ai-btn');
       aiBtn.setText('✨ AI 详解');
-      aiBtn.addEventListener('click', () => {
+      aiBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
         if (options.onAIDetail) {
           options.onAIDetail();
         }
@@ -582,7 +603,8 @@ export class DictPopup {
       addBtn.addClass('fleurdict-action-btn');
       addBtn.addClass('fleurdict-add-btn');
       addBtn.setText('+ 加入生词本');
-      addBtn.addEventListener('click', () => {
+      addBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
         if (options.onAddToWordbook) {
           options.onAddToWordbook();
         }
@@ -590,6 +612,7 @@ export class DictPopup {
         addBtn.textContent = '✓ 已添加';
         addBtn.addClass('fleurdict-added');
         setTimeout(() => {
+          if (!this.visible) return; // Skip if popup already closed
           addBtn.setText('+ 加入生词本');
           addBtn.removeClass('fleurdict-added');
         }, 2000);
