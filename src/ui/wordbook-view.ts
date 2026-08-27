@@ -184,8 +184,8 @@ export class WordbookView extends ItemView {
   private contextMode: ContextMode = 'active';
   private contextPath: string = '';
   private contextButton!: HTMLButtonElement;
-  // Cache for Youdao re-queried meanings: word -> meaning string
-  private meaningCache = new Map<string, string>();
+  // Cache for Youdao re-queried meanings: word -> { pos, def }[]
+  private meaningCache = new Map<string, { pos: string; def: string }[]>();
 
   constructor(leaf: WorkspaceLeaf, settings: FleurDictSettings, wordbookManager: WordbookManager, dictEngine: DictionaryEngine) {
     super(leaf);
@@ -474,14 +474,16 @@ export class WordbookView extends ItemView {
     }
 
     // Phase 2: async refresh Youdao meanings (non-blocking)
+    // Only replace DOM if we got actual structured data — never clear on API failure
     for (const entry of entries) {
-      if (this.meaningCache.has(entry.word)) continue;
       try {
-        const fresh = await this.getYoudaoMeaning(entry.word);
-        if (fresh && meaningEls.has(entry.word)) {
+        const structured = await this.getYoudaoMeaning(entry.word);
+        if (structured.length > 0 && meaningEls.has(entry.word)) {
           const el = meaningEls.get(entry.word)!;
-          el.setText(fresh);
+          el.empty();
+          this.renderStructuredMeaning(el as HTMLElement, structured);
         }
+        // If structured is empty (API failed), keep existing rendered content — do NOT touch the DOM
       } catch {
         // keep stored meaning
       }
@@ -549,9 +551,89 @@ export class WordbookView extends ItemView {
   }
 
   /**
+   * Render meaning from structured POS data (from Youdao API).
+   * Each {pos, def} pair becomes a <pos-tag> + definition block.
+   */
+  private renderStructuredMeaning(container: HTMLElement, items: { pos: string; def: string }[]) {
+    for (let i = 0; i < items.length; i++) {
+      if (i > 0) {
+        container.appendChild(document.createTextNode('；'));
+      }
+      const { pos, def } = items[i];
+      if (!def) continue;
+
+      // Render POS tag if available (shorten to n./v./adj./adv. form)
+      const shortPos = this.shortenPOS(pos);
+      if (shortPos) {
+        container.createEl('span', { text: shortPos, cls: 'fleurdict-pos-tag' });
+        container.appendChild(document.createTextNode(' '));
+      }
+      container.appendChild(document.createTextNode(def));
+    }
+
+    // Add expand toggle if content is long
+    this.maybeAddExpandToggle(container);
+  }
+
+  /**
+   * Shorten full POS names to compact forms: noun→n., verb→v., adjective→adj., etc.
+   */
+  private shortenPOS(pos: string): string {
+    const map: Record<string, string> = {
+      'noun': 'n.', 'verb': 'v.', 'adjective': 'adj.', 'adverb': 'adv.',
+      'pronoun': 'pron.', 'preposition': 'prep.', 'conjunction': 'conj.',
+      'interjection': 'int.', 'determiner': 'det.', 'article': 'art.',
+      'auxiliary': 'aux.', 'modal': 'modal',
+    };
+    return map[pos.toLowerCase()] || pos;
+  }
+
+  /**
+   * Add a "展开/收起" toggle button AFTER the meaning container (as a sibling).
+   * Only shows when content actually exceeds 3 lines (truncated by line-clamp).
+   * Uses a hidden sibling clone to measure full height vs clamped height.
+   */
+  private maybeAddExpandToggle(meaningContainer: HTMLElement) {
+    const parent = meaningContainer.parentElement;
+    if (!parent) return;
+    if (parent.querySelector('.fleurdict-expand-toggle')) return;
+
+    // Measure full (unclamped) height using a hidden sibling clone
+    const clone = meaningContainer.cloneNode(true) as HTMLElement;
+    Object.assign(clone.style, {
+      position: 'absolute',
+      visibility: 'hidden',
+      width: `${meaningContainer.offsetWidth}px`,
+      overflow: 'visible',
+      webkitLineClamp: 'unset',
+      maxHeight: 'none',
+      height: 'auto',
+      display: 'block',
+    });
+    clone.classList.remove('fleurdict-expanded');
+    parent.appendChild(clone);
+    const fullHeight = clone.scrollHeight;
+    clone.remove();
+
+    // Estimate clamped height: 3 lines × lineHeight
+    const lineHeight = parseFloat(getComputedStyle(meaningContainer).lineHeight) || 20;
+    const clampedHeight = lineHeight * 3;
+
+    if (fullHeight <= clampedHeight + 2) return; // content fits within 3 lines
+
+    const toggleBtn = parent.createEl('span', { text: '展开', cls: 'fleurdict-expand-toggle' });
+    meaningContainer.insertAdjacentElement('afterend', toggleBtn);
+
+    toggleBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isExpanded = meaningContainer.classList.toggle('fleurdict-expanded');
+      toggleBtn.textContent = isExpanded ? '收起' : '展开';
+    });
+  }
+
+  /**
    * Render meaning text with POS (part-of-speech) labels styled as tags.
-   * POS labels like "noun", "verb", "adj.", "adv." etc. are wrapped in
-   * <span class="fleurdict-pos-tag"> for distinct styling.
+   * Used for stored meaning text (Phase 1) which may or may not have POS prefixes.
    */
   private renderMeaningWithPOS(container: HTMLElement, text: string) {
     // Common English POS labels (case-insensitive match)
@@ -587,28 +669,44 @@ export class WordbookView extends ItemView {
         container.appendChild(document.createTextNode(part));
       }
     }
+
+    // Add expand toggle if content is long
+    this.maybeAddExpandToggle(container);
   }
 
   /**
    * Get fresh meaning from Youdao API (with in-session cache)
+   * Returns structured { pos, def }[] so POS tags are reliably available
+   * even when getAllDefinitions produces an empty POS prefix.
    */
-  private async getYoudaoMeaning(word: string): Promise<string> {
+  private async getYoudaoMeaning(word: string): Promise<{ pos: string; def: string }[]> {
+    const empty: { pos: string; def: string }[] = [];
     if (this.meaningCache.has(word)) {
-      return this.meaningCache.get(word)!;
+      return this.meaningCache.get(word) as any;
     }
 
     try {
       const results = await this.dictEngine.query(word);
       if (results.length > 0 && results[0].entries.length > 0) {
         const entry = results[0].entries[0];
-        const meaning = DictionaryEngine.getAllDefinitions(entry);
-        this.meaningCache.set(word, meaning);
-        return meaning;
+        const structured: { pos: string; def: string }[] = [];
+        for (const meaning of entry.meanings) {
+          if (meaning.definitions.length === 0) continue;
+          const defs = meaning.definitions.map((d) => d.definition).join('；');
+          structured.push({
+            pos: meaning.partOfSpeech || '',
+            def: defs,
+          });
+        }
+        if (structured.length > 0) {
+          this.meaningCache.set(word, structured as any);
+          return structured;
+        }
       }
     } catch {
       // fallback to stored meaning
     }
-    return '';
+    return empty;
   }
 
   /**
