@@ -203,6 +203,8 @@ export default class FleurDictPlugin extends Plugin {
       const results = await this.dictEngine.query(word);
       let meaning = '';
       let phonetic = '';
+      let phoneticUK = '';
+      let phoneticUS = '';
       let audioUrlUK: string | undefined;
       let audioUrlUS: string | undefined;
 
@@ -211,10 +213,16 @@ export default class FleurDictPlugin extends Plugin {
         // Use getAllDefinitions to preserve POS tags (e.g. "noun 网格，方格")
         meaning = DictionaryEngine.getAllDefinitions(entry);
         phonetic = DictionaryEngine.getPhonetic(entry);
-        // Extract UK/US audio URLs from phonetics
+        // Extract UK/US phonetics and audio URLs from phonetics
         for (const p of entry.phonetics) {
-          if (p.text?.startsWith('英') && p.audio) audioUrlUK = p.audio;
-          if (p.text?.startsWith('美') && p.audio) audioUrlUS = p.audio;
+          if (p.text?.startsWith('英')) {
+            phoneticUK = p.text;
+            if (p.audio) audioUrlUK = p.audio;
+          }
+          if (p.text?.startsWith('美')) {
+            phoneticUS = p.text;
+            if (p.audio) audioUrlUS = p.audio;
+          }
         }
       }
 
@@ -223,7 +231,7 @@ export default class FleurDictPlugin extends Plugin {
       const context = selection?.toString().trim() || undefined;
 
       // Add to local wordbook
-      await this.wordbookManager.addEntry(word, meaning, phonetic, context, undefined, audioUrlUK, audioUrlUS);
+      await this.wordbookManager.addEntry(word, meaning, phonetic, context, undefined, audioUrlUK, audioUrlUS, phoneticUK, phoneticUS);
 
       // Refresh wordbook view if open
       const leaves = this.app.workspace.getLeavesOfType(WORDBOOK_VIEW_TYPE);
