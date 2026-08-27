@@ -118,6 +118,7 @@ export default class FleurDictPlugin extends Plugin {
 
     // Unregister event handlers
     this.selectionHandler.unregister();
+    this.readingModeHandler?.unregister();
   }
 
   /**
