@@ -427,30 +427,6 @@ export class FleurDictSettingTab extends PluginSettingTab {
           });
       });
 
-    // Context mode display (read-only info)
-    const contextMode = this.plugin.settings.contextMode || 'active';
-    const contextPaths = this.plugin.settings.contextPaths || [];
-    let contextDesc = '默认显示当前笔记的生词。';
-    if (contextMode === 'all') {
-      contextDesc = '显示全部笔记的生词。';
-    } else if (contextMode === 'custom' && contextPaths.length > 0) {
-      const names = contextPaths.map(p => p.split('/').pop() || p).join('、');
-      contextDesc = `显示指定范围的生词：${names}。`;
-    } else if (contextMode === 'none') {
-      contextDesc = '显示全部生词（不限范围）。';
-    }
-
-    new Setting(wbSection)
-      .setName('侧边栏显示范围')
-      .setDesc(contextDesc + '在侧边栏点击范围按钮可切换。')
-      .addButton((button) => {
-        button
-          .setButtonText('说明')
-          .onClick(() => {
-            new Notice('在侧边栏顶部点击范围按钮，可选择：当前笔记 / 全部笔记 / 指定文件夹或笔记 / 不限范围', 5000);
-          });
-      });
-
     // Statistics display
     const stats = this.plugin.wordbookManager.getStats();
     new Setting(wbSection)
@@ -626,6 +602,19 @@ export class FleurDictSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.language)
           .onChange(async (value) => {
             this.plugin.settings.language = value as any;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    // Reading mode context menu
+    new Setting(uiSection)
+      .setName('阅读模式右键菜单')
+      .setDesc('启用后，在阅读模式下右键点击单词会显示 FleurDict 专属菜单（查词、加入生词本等）')
+      .addToggle((toggle) => {
+        toggle
+          .setValue(this.plugin.settings.readingModeContextMenu)
+          .onChange(async (value) => {
+            this.plugin.settings.readingModeContextMenu = value;
             await this.plugin.saveSettings();
           });
       });
