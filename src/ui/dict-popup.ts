@@ -39,10 +39,15 @@ export class DictPopup {
   private containerStartTop = 0;
   private isDragging = false;
 
-  // Vertical resize state
+  // Bidirectional resize state (bottom-right corner)
+  private resizeStartX = 0;
   private resizeStartY = 0;
+  private containerStartWidth = 0;
   private containerStartHeight = 0;
   private isResizing = false;
+
+  // Outside click handler (for closing popup)
+  private outsideClickHandler: ((e: MouseEvent) => void) | null = null;
 
   constructor(plugin: Plugin, settings: FleurDictSettings, dictEngine: DictionaryEngine) {
     this.plugin = plugin;
@@ -77,10 +82,15 @@ export class DictPopup {
     if (!this.container) return;
     const l = this.settings.popupLeft;
     const t = this.settings.popupTop;
+    const w = this.settings.popupWidth;
     const h = this.settings.popupHeight;
     if (l != null && t != null) {
       this.container.style.setProperty('left', `${l}px`);
       this.container.style.setProperty('top', `${t}px`);
+    }
+    // Restore saved width if available
+    if (w != null && w > 0) {
+      this.container.style.setProperty('width', `${w}px`);
     }
     // Restore saved height if available
     if (h != null && h > 0) {
@@ -89,61 +99,56 @@ export class DictPopup {
   }
 
   /**
-   * Setup drag handlers on the header
+   * Setup drag handlers — entire popup is draggable.
+   * Document-level mousemove/mouseup are registered per-drag (on mousedown)
+   * and cleaned up on mouseup, so every drag attempt works.
    */
   private setupDrag(): void {
     if (!this.container) return;
-    const header = this.container.querySelector('.fleurdict-header-top') as HTMLElement;
-    if (!header) return;
 
-    header.addClass('fleurdict-draggable-header');
-
-    header.addEventListener('mousedown', (e) => {
-      // Don't start drag if clicking close button
+    this.container.addEventListener('mousedown', (e) => {
+      // Don't start drag if clicking close button or resize handle
       if ((e.target as HTMLElement).closest('.fleurdict-close-btn')) return;
-      // Prevent text selection during drag, but not the default drag behavior
+      if ((e.target as HTMLElement).closest('.fleurdict-resize-handle')) return;
+      // Don't start drag on interactive elements (buttons, links, etc.)
+      if ((e.target as HTMLElement).closest('button, a, input, textarea')) return;
+
       e.preventDefault();
       this.isDragging = true;
       this.dragStartX = e.clientX;
       this.dragStartY = e.clientY;
       this.containerStartLeft = parseInt(this.container!.style.left || '0', 10);
       this.containerStartTop = parseInt(this.container!.style.top || '0', 10);
-      // Disable user select during drag for smoother following
       document.body.classList.add('fleurdict-dragging');
+
+      // Register document-level handlers for this drag session only
+      const onDragMove = (moveEvent: MouseEvent) => {
+        if (!this.isDragging || !this.container) return;
+        const dx = moveEvent.clientX - this.dragStartX;
+        const dy = moveEvent.clientY - this.dragStartY;
+        this.container.style.setProperty('left', `${this.containerStartLeft + dx}px`);
+        this.container.style.setProperty('top', `${this.containerStartTop + dy}px`);
+      };
+
+      const onDragUp = () => {
+        if (this.isDragging) {
+          this.isDragging = false;
+          document.removeEventListener('mousemove', onDragMove);
+          document.removeEventListener('mouseup', onDragUp);
+          document.body.classList.remove('fleurdict-dragging');
+          this.savePopupRect();
+        }
+      };
+
+      document.addEventListener('mousemove', onDragMove);
+      document.addEventListener('mouseup', onDragUp);
     });
   }
 
   /**
-   * Global mouse handlers for drag
+   * Setup bidirectional resize handle at bottom-right corner
    */
-  private attachGlobalDragHandlers(): void {
-    const onDragMove = (e: MouseEvent) => {
-      if (!this.isDragging || !this.container) return;
-      const dx = e.clientX - this.dragStartX;
-      const dy = e.clientY - this.dragStartY;
-      this.container.style.setProperty('left', `${this.containerStartLeft + dx}px`);
-      this.container.style.setProperty('top', `${this.containerStartTop + dy}px`);
-    };
-
-    const onDragUp = () => {
-      if (this.isDragging) {
-        this.isDragging = false;
-        document.removeEventListener('mousemove', onDragMove);
-        document.removeEventListener('mouseup', onDragUp);
-        // Restore user select
-        document.body.classList.remove('fleurdict-dragging');
-        this.savePopupRect();
-      }
-    };
-
-    document.addEventListener('mousemove', onDragMove);
-    document.addEventListener('mouseup', onDragUp);
-  }
-
-  /**
-   * Setup vertical resize handle at bottom
-   */
-  private setupVerticalResize(): void {
+  private setupResize(): void {
     if (!this.container) return;
 
     const resizeHandle = document.createElement('div');
@@ -154,13 +159,18 @@ export class DictPopup {
       e.preventDefault();
       e.stopPropagation();
       this.isResizing = true;
+      this.resizeStartX = e.clientX;
       this.resizeStartY = e.clientY;
+      this.containerStartWidth = this.container!.offsetWidth;
       this.containerStartHeight = this.container!.offsetHeight;
 
       const onResizeMove = (moveEvent: MouseEvent) => {
         if (!this.isResizing || !this.container) return;
+        const dx = moveEvent.clientX - this.resizeStartX;
         const dy = moveEvent.clientY - this.resizeStartY;
+        const newWidth = Math.max(290, this.containerStartWidth + dx);
         const newHeight = Math.max(300, this.containerStartHeight + dy);
+        this.container.style.setProperty('width', `${newWidth}px`);
         this.container.style.setProperty('height', `${newHeight}px`);
       };
 
@@ -336,12 +346,11 @@ export class DictPopup {
       this.positionPopup(options.x, options.y);
     }
 
-    // Setup drag handlers
+    // Setup drag handlers (entire popup draggable)
     this.setupDrag();
-    this.attachGlobalDragHandlers();
     
-    // Setup vertical resize handle
-    this.setupVerticalResize();
+    // Setup resize handle (bottom-right corner, bidirectional)
+    this.setupResize();
 
     // Click outside to close
     this.container.addEventListener('click', (e) => {
@@ -593,6 +602,7 @@ export class DictPopup {
         if (options.onAIDetail) {
           options.onAIDetail();
         }
+        this.close();
       });
       footer.appendChild(aiBtn);
     }

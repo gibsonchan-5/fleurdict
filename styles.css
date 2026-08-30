@@ -71,7 +71,6 @@ body.fleurdict-dragging {
   border-radius: 14px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.10), 0 4px 12px rgba(0, 0, 0, 0.06);
   min-width: 290px;
-  max-width: 400px;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
@@ -142,6 +141,8 @@ body.fleurdict-dragging {
   left: 0 !important;
   top: 0 !important;
   will-change: transform;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .fleurdict-ai-modal.is-dragging {
@@ -179,6 +180,8 @@ body.fleurdict-dragging {
   font-size: 14px;
   display: flex;
   flex-direction: column;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .fleurdict-ai-modal-body {
@@ -227,6 +230,8 @@ body.fleurdict-dragging {
   flex: 1;
   min-height: 0;
   overflow: auto;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .fleurdict-ai-original-label {
@@ -538,14 +543,14 @@ body.fleurdict-dragging {
   margin-left: 8px;
 }
 
-/* Vertical resize handle — bottom edge drag area, invisible */
+/* Bidirectional resize handle — bottom-right corner drag area */
 .fleurdict-resize-handle {
   position: absolute;
   bottom: 0;
-  left: 0;
   right: 0;
-  height: 8px;
-  cursor: ns-resize;
+  width: 14px;
+  height: 14px;
+  cursor: nwse-resize;
   z-index: 10;
   pointer-events: auto;
 }
@@ -1267,6 +1272,7 @@ body.fleurdict-dragging {
   flex-direction: column;
   height: 70vh;
   max-height: 600px;
+  overflow: hidden !important;
 }
 
 .fleurdict-ai-modal .modal-content {
@@ -1337,6 +1343,8 @@ body.fleurdict-dragging {
   font-size: 13px;
   line-height: 1.6;
   flex-shrink: 0;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .fleurdict-ai-original-label {
@@ -1350,6 +1358,8 @@ body.fleurdict-dragging {
   flex: 1;
   min-height: 0;
   overflow: auto;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 /* Loading indicator text */

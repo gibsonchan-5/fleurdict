@@ -154,7 +154,7 @@ export class AIModal extends Modal {
     closeButton.addClass('fleurdict-ai-btn');
     closeButton.onclick = () => this.close();
 
-    // === Drag to move (title bar) ===
+    // === Drag to move (title bar only) ===
     titleBar.addEventListener('mousedown', (e) => {
       if (e.button !== 0) return;
       if ((e.target as HTMLElement).closest('button')) return;
