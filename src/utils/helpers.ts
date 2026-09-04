@@ -228,3 +228,23 @@ export function sortBy<T>(array: T[], ...keys: (keyof T)[]): T[] {
     return 0;
   });
 }
+
+
+/**
+ * Remap a vault path after a file/folder rename or move.
+ * - exact match of oldPath -> newPath
+ * - paths under oldPath/ -> newPath + remaining suffix
+ * Returns the original path when it is unaffected.
+ */
+export function remapVaultPath(path: string, oldPath: string, newPath: string): string {
+  if (path === oldPath) {
+    return newPath;
+  }
+  const prefix = oldPath.endsWith("/") ? oldPath : oldPath + "/";
+  if (path.startsWith(prefix)) {
+    const newPrefix = newPath.endsWith("/") ? newPath : newPath + "/";
+    return newPrefix + path.slice(prefix.length);
+  }
+  return path;
+}
+

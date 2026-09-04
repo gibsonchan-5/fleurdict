@@ -10,7 +10,7 @@ import {
   WordbookData,
   FleurDictSettings,
 } from '../types';
-import { generateId, now, normalizeWord, isPhrase } from '../utils/helpers';
+import { generateId, now, normalizeWord, isPhrase, remapVaultPath } from '../utils/helpers';
 
 /**
  * Wordbook manager - handles vocabulary notebook operations
@@ -289,6 +289,32 @@ export class WordbookManager {
   // ==========================================================================
   // Export
   // ==========================================================================
+
+
+  /**
+   * Update stored source paths after a vault file/folder rename or move.
+   * Returns the number of wordbook entries that changed.
+   */
+  async remapSources(oldPath: string, newPath: string): Promise<number> {
+    if (!oldPath || !newPath || oldPath === newPath) {
+      return 0;
+    }
+
+    let updated = 0;
+    for (const entry of this.getAllEntries()) {
+      if (!entry.source) continue;
+      const next = remapVaultPath(entry.source, oldPath, newPath);
+      if (next !== entry.source) {
+        entry.source = next;
+        updated++;
+      }
+    }
+
+    if (updated > 0) {
+      await this.save();
+    }
+    return updated;
+  }
 
   /**
    * Export wordbook to Markdown format
