@@ -1,14 +1,172 @@
 /**
  * FleurDict - Context Menu
- * Registers right-click menu items
+ * Registers right-click menu items (Markdown editor-menu + shared builder)
  */
 
 import { Plugin, Menu, MenuItem } from 'obsidian';
 import { FleurDictSettings } from '../types';
 import { SelectionHandler } from './selection-handler';
 
+export interface PreparedSelection {
+  /** Original selection (used for AI translate / detail) */
+  fullSelection: string;
+  /** Cleaned word/phrase (used for lookup / wordbook) */
+  cleanWord: string;
+}
+
 /**
- * Context menu manager
+ * Strip common Markdown markers and extract an English word/phrase.
+ * Returns null when the selection has no English letters.
+ */
+export function prepareSelectionText(raw: string, stripMarkdown = true): PreparedSelection | null {
+  const fullSelection = raw.trim();
+  if (!fullSelection || !/[a-zA-Z]/.test(fullSelection)) {
+    return null;
+  }
+
+  let cleaned = fullSelection;
+  if (stripMarkdown) {
+    cleaned = cleaned
+      .replace(/^#+\s*/gm, '')
+      .replace(/\*\*/g, '')
+      .replace(/\*/g, '')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .replace(/`/g, '')
+      .trim();
+  }
+
+  const match = cleaned.match(/[a-zA-Z][a-zA-Z'\-\s,;:!?]*[a-zA-Z']?/);
+  const cleanWord = (match ? match[0].trim() : cleaned) || fullSelection;
+
+  return { fullSelection, cleanWord };
+}
+
+/**
+ * Append FleurDict actions to an Obsidian Menu.
+ * Returns true when items were added.
+ */
+export function appendFleurDictMenuItems(
+  menu: Menu,
+  plugin: Plugin,
+  selectionHandler: SelectionHandler,
+  rawText: string,
+  options?: { stripMarkdown?: boolean }
+): boolean {
+  const prepared = prepareSelectionText(rawText, options?.stripMarkdown !== false);
+  if (!prepared) {
+    return false;
+  }
+
+  const { fullSelection, cleanWord } = prepared;
+  console.log('FleurDict: Adding menu items for:', cleanWord, '| full selection:', fullSelection);
+
+  menu.addSeparator();
+
+  menu.addItem((item: MenuItem) => {
+    item
+      .setTitle('FleurDict 查词')
+      .setIcon('book-open')
+      .onClick(() => {
+        selectionHandler.lookupWord(cleanWord);
+      });
+  });
+
+  menu.addItem((item: MenuItem) => {
+    item
+      .setTitle('加入生词本')
+      .setIcon('bookmark')
+      .onClick(() => {
+        plugin.app.workspace.trigger('fleurdict:add-to-wordbook', cleanWord);
+      });
+  });
+
+  menu.addItem((item: MenuItem) => {
+    item
+      .setTitle('AI 翻译')
+      .setIcon('languages')
+      .onClick(() => {
+        plugin.app.workspace.trigger('fleurdict:ai-translate', fullSelection);
+      });
+  });
+
+  menu.addItem((item: MenuItem) => {
+    item
+      .setTitle('AI 详解')
+      .setIcon('sparkles')
+      .onClick(() => {
+        plugin.app.workspace.trigger('fleurdict:ai-detail', fullSelection);
+      });
+  });
+
+  menu.addSeparator();
+  return true;
+}
+
+/**
+ * Show a standalone FleurDict context menu at screen coordinates.
+ */
+export function showFleurDictMenuAt(
+  plugin: Plugin,
+  selectionHandler: SelectionHandler,
+  x: number,
+  y: number,
+  rawText: string,
+  options?: { stripMarkdown?: boolean }
+): boolean {
+  const menu = new Menu();
+  const added = appendFleurDictMenuItems(menu, plugin, selectionHandler, rawText, options);
+  if (!added) {
+    return false;
+  }
+  menu.showAtPosition({ x, y });
+  return true;
+}
+
+/**
+ * Word under mouse via caretRangeFromPoint (preview / PDF text layer / plain DOM).
+ */
+export function getWordAtClickPoint(evt: MouseEvent): string | null {
+  const doc = document as Document & {
+    caretRangeFromPoint?: (x: number, y: number) => Range | null;
+    caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null;
+  };
+
+  let node: Node | null = null;
+  let offset = 0;
+
+  if (typeof doc.caretRangeFromPoint === 'function') {
+    const range = doc.caretRangeFromPoint(evt.clientX, evt.clientY);
+    if (!range) return null;
+    node = range.startContainer;
+    offset = range.startOffset;
+  } else if (typeof doc.caretPositionFromPoint === 'function') {
+    const pos = doc.caretPositionFromPoint(evt.clientX, evt.clientY);
+    if (!pos) return null;
+    node = pos.offsetNode;
+    offset = pos.offset;
+  } else {
+    return null;
+  }
+
+  if (!node || node.nodeType !== Node.TEXT_NODE) return null;
+  return extractWordAtOffset(node.textContent || '', offset);
+}
+
+function extractWordAtOffset(text: string, offset: number): string | null {
+  const wordRegex = /[a-zA-Z'-]+/g;
+  let match: RegExpExecArray | null;
+  while ((match = wordRegex.exec(text)) !== null) {
+    const start = match.index;
+    const end = start + match[0].length;
+    if (offset >= start && offset <= end) {
+      return match[0];
+    }
+  }
+  return null;
+}
+
+/**
+ * Context menu manager (Markdown edit mode via editor-menu)
  */
 export class ContextMenuManager {
   private plugin: Plugin;
@@ -25,29 +183,20 @@ export class ContextMenuManager {
     this.selectionHandler = selectionHandler;
   }
 
-  /**
-   * Register context menu
-   */
   register(): void {
     this.plugin.registerEvent(
-      this.plugin.app.workspace.on('editor-menu', (menu, editor, view) => {
-        this.buildMenu(menu, editor, view);
+      this.plugin.app.workspace.on('editor-menu', (menu, editor) => {
+        this.buildMenu(menu, editor);
       })
     );
   }
 
-  /**
-   * Update settings
-   */
   updateSettings(settings: FleurDictSettings): void {
     this.settings = settings;
   }
 
-  /**
-   * Build the context menu
-   */
   private buildMenu(menu: Menu, editor: any): void {
-    let selectedText = editor.getSelection().trim();
+    const selectedText = editor.getSelection()?.trim() || '';
     console.log('FleurDict: Context menu opened, selected text:', selectedText);
 
     if (!selectedText) {
@@ -55,83 +204,8 @@ export class ContextMenuManager {
       return;
     }
 
-    // Clean up: remove markdown syntax (headers, bold, links, etc.)
-    const fullSelection = selectedText; // preserve user's original selection for AI
-
-    selectedText = selectedText
-      .replace(/^#+\s*/gm, '')   // remove headers
-      .replace(/\*\*/g, '')      // remove bold
-      .replace(/\*/g, '')        // remove italic
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // remove markdown links
-      .replace(/`/g, '')         // remove inline code
-      .trim();
-
-    // Extract the actual English word/phrase (remove non-English parts)
-    // Only used for lookup / wordbook — AI features use fullSelection instead
-    const match = selectedText.match(/[a-zA-Z][a-zA-Z'\-\s,;:!?]*[a-zA-Z']?/);
-    const cleanWord = match ? match[0].trim() : selectedText;
-
-    // Allow the menu to appear as long as there's at least one English letter
-    // (previously required the ENTIRE text to be English-only, which blocked sentences with punctuation)
-    const hasEnglish = /[a-zA-Z]/.test(fullSelection);
-    if (!hasEnglish) {
-      console.log('FleurDict: No English text found, skipping menu');
-      return;
-    }
-
-    console.log('FleurDict: Adding menu items for:', cleanWord, '| full selection:', fullSelection);
-    menu.addSeparator();
-
-    // Lookup word — uses extracted single word/phrase
-    menu.addItem((item: MenuItem) => {
-      item
-        .setTitle(`FleurDict 查词`)
-        .setIcon('book-open')
-        .onClick(() => {
-          console.log('FleurDict: Lookup clicked for:', cleanWord);
-          this.selectionHandler.lookupWord(cleanWord);
-        });
+    appendFleurDictMenuItems(menu, this.plugin, this.selectionHandler, selectedText, {
+      stripMarkdown: true,
     });
-
-    // Add to wordbook — uses extracted single word/phrase
-    menu.addItem((item: MenuItem) => {
-      item
-        .setTitle('加入生词本')
-        .setIcon('bookmark')
-        .onClick(() => {
-          this.plugin.app.workspace.trigger('fleurdict:add-to-wordbook', cleanWord);
-        });
-    });
-
-    // AI Translate — uses the user's FULL selection, not just the first word
-    menu.addItem((item: MenuItem) => {
-      item
-        .setTitle('AI 翻译')
-        .setIcon('languages')
-        .onClick(() => {
-          console.log('FleurDict: AI translate for full text:', fullSelection);
-          this.plugin.app.workspace.trigger('fleurdict:ai-translate', fullSelection);
-        });
-    });
-
-    // AI Detail — uses the user's FULL selection, not just the first word
-    menu.addItem((item: MenuItem) => {
-      item
-        .setTitle('AI 详解')
-        .setIcon('sparkles')
-        .onClick(() => {
-          console.log('FleurDict: AI detail for full text:', fullSelection);
-          this.plugin.app.workspace.trigger('fleurdict:ai-detail', fullSelection);
-        });
-    });
-
-    menu.addSeparator();
-  }
-
-  /**
-   * Check if text is English
-   */
-  private isEnglishText(text: string): boolean {
-    return /^[a-zA-Z][a-zA-Z'\-\s]*[a-zA-Z']?$/.test(text) && text.length <= 50;
   }
 }

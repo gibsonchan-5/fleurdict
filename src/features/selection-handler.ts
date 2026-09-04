@@ -39,13 +39,19 @@ export class SelectionHandler {
   }
 
   /**
-   * Get current editor selection (CM6-compatible)
+   * Get current selection across Markdown / other editors / DOM views (PDF, plain text).
    */
   getSelection(): string | null {
     const activeView = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
-    if (!activeView) return null;
-    const sel = activeView.editor.getSelection();
-    return sel && sel.trim() ? sel.trim() : null;
+    const mdSel = activeView?.editor?.getSelection()?.trim();
+    if (mdSel) return mdSel;
+
+    const activeEditor = (this.plugin.app.workspace as any).activeEditor?.editor;
+    const edSel = activeEditor?.getSelection?.()?.trim();
+    if (edSel) return edSel;
+
+    const domSel = window.getSelection()?.toString().trim();
+    return domSel || null;
   }
 
   /**
