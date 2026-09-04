@@ -20,6 +20,8 @@ import { FlashcardModal } from './ui/flashcard-modal';
 import { WordbookView, WORDBOOK_VIEW_TYPE } from './ui/wordbook-view';
 import { createWordHighlightPlugin, refreshAllEditorHighlights } from './features/word-highlighter';
 import { ReadingModeHandler } from './features/reading-mode-handler';
+import { PlainTextHandler } from './features/plain-text-handler';
+import { PdfHandler } from './features/pdf-handler';
 
 /**
  * FleurDict Plugin
@@ -35,6 +37,8 @@ export default class FleurDictPlugin extends Plugin {
   contextMenuManager!: ContextMenuManager;
   commandManager!: CommandManager;
   readingModeHandler!: ReadingModeHandler;
+  plainTextHandler!: PlainTextHandler;
+  pdfHandler!: PdfHandler;
 
   async onload() {
     console.log('[FleurDict-DIAG] === Plugin loading BUILD v2026-08-22-1925 ===');
@@ -97,6 +101,12 @@ export default class FleurDictPlugin extends Plugin {
     this.readingModeHandler = new ReadingModeHandler(this, this.wordbookManager, this.selectionHandler);
     this.readingModeHandler.register();
 
+    // Plain text (txt/json/yaml/xml) and PDF: DOM selection + custom context menu
+    this.plainTextHandler = new PlainTextHandler(this, this.selectionHandler);
+    this.plainTextHandler.register();
+    this.pdfHandler = new PdfHandler(this, this.selectionHandler);
+    this.pdfHandler.register();
+
     // 启动时延迟刷新所有视图的高亮（确保已打开的笔记也能高亮）
     this.app.workspace.onLayoutReady(() => {
       setTimeout(() => {
@@ -119,6 +129,8 @@ export default class FleurDictPlugin extends Plugin {
     // Unregister event handlers
     this.selectionHandler.unregister();
     this.readingModeHandler?.unregister();
+    this.plainTextHandler?.unregister();
+    this.pdfHandler?.unregister();
   }
 
   /**
