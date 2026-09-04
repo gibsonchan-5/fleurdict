@@ -3,7 +3,7 @@
  * An elegant English dictionary plugin for Obsidian
  */
 
-import { Plugin, Notice, WorkspaceLeaf } from 'obsidian';
+import { Plugin, Notice, WorkspaceLeaf, TAbstractFile } from 'obsidian';
 import { FleurDictSettings, DEFAULT_SETTINGS } from './types';
 import { DictionaryEngine } from './core/dictionary-engine';
 import { WordbookManager } from './core/wordbook-manager';
@@ -20,6 +20,7 @@ import { FlashcardModal } from './ui/flashcard-modal';
 import { WordbookView, WORDBOOK_VIEW_TYPE } from './ui/wordbook-view';
 import { createWordHighlightPlugin, refreshAllEditorHighlights } from './features/word-highlighter';
 import { ReadingModeHandler } from './features/reading-mode-handler';
+import { remapVaultPath } from './utils/helpers';
 
 /**
  * FleurDict Plugin
@@ -84,6 +85,9 @@ export default class FleurDictPlugin extends Plugin {
 
     // Register workspace events
     this.registerWorkspaceEvents();
+
+    // Keep wordbook source paths in sync when notes/folders are renamed or moved
+    this.registerVaultEvents();
 
     // Register CM6 editor extension for word highlighting in edit mode
     const [refreshField, highlightPlugin] = createWordHighlightPlugin(
@@ -154,6 +158,56 @@ export default class FleurDictPlugin extends Plugin {
     this.contextMenuManager.updateSettings(this.settings);
     this.commandManager.updateSettings(this.settings);
   }
+
+
+  /**
+   * Keep wordbook `source` paths (and custom contextPath) aligned with vault renames/moves.
+   */
+  private registerVaultEvents() {
+    this.registerEvent(
+      this.app.vault.on('rename', async (file: TAbstractFile, oldPath: string) => {
+        try {
+          const newPath = file.path;
+          const updated = await this.wordbookManager.remapSources(oldPath, newPath);
+
+          let contextUpdated = false;
+          if (this.settings.contextPath) {
+            const nextContext = remapVaultPath(this.settings.contextPath, oldPath, newPath);
+            if (nextContext !== this.settings.contextPath) {
+              this.settings.contextPath = nextContext;
+              contextUpdated = true;
+              await this.saveSettings();
+            }
+          }
+
+          if (updated > 0 || contextUpdated) {
+            console.log(
+              `[FleurDict] Remapped paths after rename: ${oldPath} -> ${newPath}` +
+                (updated ? ` (${updated} entries)` : '') +
+                (contextUpdated ? ' (contextPath)' : '')
+            );
+            this.refreshWordbookViews();
+          }
+        } catch (error) {
+          console.error('FleurDict: Failed to remap sources after rename:', error);
+        }
+      })
+    );
+  }
+
+  /**
+   * Refresh open wordbook sidebar views
+   */
+  private refreshWordbookViews() {
+    const leaves = this.app.workspace.getLeavesOfType(WORDBOOK_VIEW_TYPE);
+    for (const leaf of leaves) {
+      const view = leaf.view as WordbookView;
+      if (typeof view.refresh === 'function') {
+        view.refresh();
+      }
+    }
+  }
+
 
   /**
    * Register workspace event handlers
