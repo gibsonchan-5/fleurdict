@@ -46,6 +46,14 @@ An elegant English dictionary plugin for Obsidian, providing word lookup, AI-pow
 - **响应式设计**：支持桌面端和移动端
 - **可拖拽弹窗**：词典弹窗可自由拖拽和调整大小
 
+#### 数据安全与多设备
+
+- **密钥默认存入系统钥匙串**：AI API Key 与欧路 Token 保存在系统钥匙串（macOS 钥匙串 / Windows 凭据管理器），不会以明文写入 `data.json`
+- **可切换保存位置**：设置 > 密钥存储 可在“系统钥匙串”与“data.json”之间随时切换，切换时密钥自动搬运，无需重新填写
+  - **系统钥匙串**（默认，推荐）：密钥不会离开本机，也不会随 Obsidian Sync / iCloud / OneDrive 扩散。代价是密钥不随 vault 同步，**每台设备需要各自填写一次**
+  - **data.json**：密钥随 vault 同步，多设备共用一份。代价是以明文保存在仓库中，并会随同步上传到云端
+- **默认不输出日志**：插件不会把查词内容、生词本词条或选中文本打印到控制台
+
 ### 安装方式
 
 #### 通过社区插件安装（推荐）
@@ -124,7 +132,8 @@ An elegant English dictionary plugin for Obsidian, providing word lookup, AI-pow
 - **Draggable popup**: Freely draggable and resizable dictionary popup
 
 #### Privacy & Security
-- **Keys in the keychain**: Your API key and Eudic token are stored in the system keychain (macOS Keychain / Windows Credential Manager) and are never written to `data.json` in plain text
+- **Keys in the keychain by default**: Your API key and Eudic token are stored in the system keychain (macOS Keychain / Windows Credential Manager) and are never written to `data.json` in plain text
+- **Choose where keys live**: Settings → 密钥存储 switches between the keychain and `data.json` on the fly, carrying the existing keys over. The keychain never leaves your machine, so **each device needs its own paste**; `data.json` syncs with the vault across devices but keeps keys in clear text
 - **No logs by default**: The plugin prints no user content (looked-up words, notebook entries, selected text) to the console
 - **Controllable highlights**: In-note vocabulary highlighting can be toggled on or off at any time in the settings
 

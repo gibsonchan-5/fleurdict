@@ -14,8 +14,11 @@ import { debugLog } from './core/debug';
 import {
   SECRET_FIELDS,
   hydrateSecrets,
+  migrateSecrets,
+  resolveBackend,
   scrubSecretsForPersistence,
   secretStorageAvailable,
+  type SecretBackend,
 } from './core/secret-store';
 import { SelectionHandler } from './features/selection-handler';
 import { PdfSelectionHandler } from './features/pdf-selection-handler';
@@ -49,8 +52,18 @@ export default class FleurDictPlugin extends Plugin {
   /** Whether API keys can be kept in the system keychain on this build. */
   secretStorageAvailable = false;
 
+  /**
+   * Where API keys are actually kept right now.
+   *
+   * `system` only applies when the keychain exists and the user did not opt
+   * into the vault backend; every other combination falls back to `vault`.
+   */
+  get secretBackend(): SecretBackend {
+    return resolveBackend(this.app, this.settings.secretStorageMode);
+  }
+
   async onload() {
-    debugLog('[FleurDict-DIAG] === Plugin loading BUILD v2026-09-12-SECRET-12 ===');
+    debugLog('[FleurDict-DIAG] === Plugin loading BUILD v2026-09-12-SECRET-13 ===');
     debugLog('[FleurDict-DIAG] Loading plugin...');
 
     // Load settings
@@ -149,10 +162,10 @@ export default class FleurDictPlugin extends Plugin {
   /**
    * Load settings from storage
    *
-   * Secrets live in the system keychain rather than in data.json. Any
-   * plain-text key still found on disk (including the stale flat copies
-   * written by older versions) is promoted into the keychain here and then
-   * removed from the file.
+   * Depending on `secretStorageMode`, secrets live in the system keychain or
+   * in data.json. On the keychain backend any plain-text key still found on
+   * disk (including the stale flat copies written by older versions) is
+   * promoted into the keychain here and then removed from the file.
    */
   async loadSettings() {
     const data = await this.loadData();
@@ -171,6 +184,7 @@ export default class FleurDictPlugin extends Plugin {
       this.app,
       this.settings as unknown as Record<string, unknown>,
       data as Record<string, unknown> | null,
+      this.secretBackend,
     );
     debugLog('FleurDict: secret storage', secrets);
 
@@ -186,11 +200,12 @@ export default class FleurDictPlugin extends Plugin {
   }
 
   /**
-   * Writes settings to data.json with every secret field stripped out.
+   * Writes settings to data.json.
    *
-   * Secrets are pushed to the system keychain first; a field is only blanked
-   * once the keychain confirms it holds the value, so an unavailable keychain
-   * degrades to the old plain-text behaviour instead of losing the key.
+   * On the keychain backend every secret field is stripped out: the value goes
+   * to the keychain first and is only blanked once the keychain confirms it
+   * holds it, so an unavailable keychain degrades to plain text instead of
+   * losing the key. On the vault backend the values are written as-is.
    * Safe to call before the feature modules exist.
    */
   private async writeSettingsToDisk() {
@@ -198,6 +213,7 @@ export default class FleurDictPlugin extends Plugin {
     data.settings = await scrubSecretsForPersistence(
       this.app,
       this.settings as unknown as Record<string, unknown>,
+      this.secretBackend,
     );
     // Older versions also wrote flat copies at the top level, which are never
     // read back. Drop the secret ones so they cannot linger as plain text.
@@ -222,6 +238,36 @@ export default class FleurDictPlugin extends Plugin {
     this.pdfWordHighlighter?.updateSettings(this.settings);
     this.contextMenuManager?.updateSettings(this.settings);
     this.commandManager?.updateSettings(this.settings);
+  }
+
+  /**
+   * Switches where API keys are kept and carries the existing values over.
+   *
+   * Going to the keychain is verified field by field. If any write cannot be
+   * confirmed the switch is rolled back to the previous mode, which leaves the
+   * plain-text values in data.json rather than dropping them on the floor.
+   */
+  async setSecretStorageMode(
+    mode: 'system' | 'vault',
+  ): Promise<{ ok: boolean; failed: string[] }> {
+    const previous = this.settings.secretStorageMode;
+    const target = resolveBackend(this.app, mode);
+
+    this.settings.secretStorageMode = mode;
+    const result = await migrateSecrets(
+      this.app,
+      this.settings as unknown as Record<string, unknown>,
+      target,
+    );
+
+    if (!result.ok) {
+      this.settings.secretStorageMode = previous;
+      await this.saveSettings();
+      return { ok: false, failed: [...result.failed] };
+    }
+
+    await this.saveSettings();
+    return { ok: true, failed: [] };
   }
 
   /**
