@@ -15,6 +15,7 @@ export class FleurDictSettingTab extends PluginSettingTab {
   // DOM control refs for AI settings (to sync on provider switch)
   private aiBaseUrlText: any;
   private aiModelText: any;
+  private aiDetailPromptTextArea: any;
 
   constructor(app: App, plugin: FleurDictPlugin) {
     super(app, plugin);
@@ -366,6 +367,31 @@ export class FleurDictSettingTab extends PluginSettingTab {
           });
       });
 
+    new Setting(aiSection)
+      .setName('AI 详解自定义 Prompt')
+      .setDesc('自定义 AI 详解的系统提示词，留空使用默认（资深英语教师七段式讲解）。占位符可用 {word} 代表查询单词。')
+      .addTextArea((text) => {
+        this.aiDetailPromptTextArea = text;
+        text
+          .setPlaceholder('留空使用默认提示词')
+          .setValue(this.plugin.settings.aiDetailPrompt)
+          .onChange(async (value) => {
+            this.plugin.settings.aiDetailPrompt = value;
+            await this.plugin.saveSettings();
+          });
+        text.inputEl.addClass('fleurdict-prompt-textarea');
+      })
+      .addExtraButton((btn) => {
+        btn
+          .setIcon('rotate-ccw')
+          .setTooltip('恢复默认提示词')
+          .onClick(async () => {
+            this.plugin.settings.aiDetailPrompt = '';
+            await this.plugin.saveSettings();
+            this.aiDetailPromptTextArea?.setValue('');
+          });
+      });
+
     // Test AI connection button
     new Setting(aiSection)
       .setName('测试连接')
@@ -616,6 +642,31 @@ export class FleurDictSettingTab extends PluginSettingTab {
           .onChange(async (value) => {
             this.plugin.settings.readingModeContextMenu = value;
             await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(uiSection)
+      .setName('PDF 双击查词')
+      .setDesc('启用后，在 PDF 文档中双击单词即可查词，弹窗中可加入生词本或 AI 详解')
+      .addToggle((toggle) => {
+        toggle
+          .setValue(this.plugin.settings.pdfLookupEnabled)
+          .onChange(async (value) => {
+            this.plugin.settings.pdfLookupEnabled = value;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(uiSection)
+      .setName('PDF 生词高亮')
+      .setDesc('在 PDF 文档中持久高亮生词本内的单词（红=陌生、黄=渐熟、绿=熟悉，与笔记一致）')
+      .addToggle((toggle) => {
+        toggle
+          .setValue(this.plugin.settings.pdfHighlightEnabled)
+          .onChange(async (value) => {
+            this.plugin.settings.pdfHighlightEnabled = value;
+            await this.plugin.saveSettings();
+            this.plugin.pdfWordHighlighter?.updateSettings(this.plugin.settings);
           });
       });
   }

@@ -16,6 +16,13 @@ An elegant English dictionary plugin for Obsidian, providing word lookup, AI-pow
 - **离线支持**：可导入本地词典文件，无网络也能查词
 - **智能缓存**：自动缓存查询结果，减少重复请求
 
+#### PDF 阅读支持
+- **PDF 双击查词**：在 Obsidian 内置 PDF 阅读器中双击单词即可查询，与笔记内体验一致
+- **PDF 右键菜单**：选中文本后右键即可「查词 / 加入生词本 / AI 翻译 / AI 详解」
+- **生词高亮驻留**：PDF 中的生词按熟练度分级着色，翻页、滚动、缩放都不会丢失
+- **连字还原**：自动处理 PDF 常见的软连字符与跨行断词（`exam-` + `ple` → `example`）
+- **两套独立配色**：PDF 高亮采用独立配色方案，不会与笔记内高亮互相干扰
+
 #### AI 智能解析
 - **AI 详解**：一键获取单词的详细讲解，包括词源、记忆技巧、用法示例
 - **AI 翻译**：智能翻译选中的文本或整个句子
@@ -72,7 +79,8 @@ An elegant English dictionary plugin for Obsidian, providing word lookup, AI-pow
 #### 2. 开始使用
 
 - **划词查词**：在编辑器中双击单词或划选短语
-- **右键菜单**：右键点击选中的文本，选择 "查词"、"AI 详解"、"加入生词本"
+- **PDF 查词**：直接在 PDF 阅读器中双击单词或划选短语，操作方式与笔记内完全一致
+- **右键菜单**：右键点击选中的文本，选择“查词”、“AI 详解”、“加入生词本”
 - **侧栏视图**：点击左侧 ribbon 图标打开生词本或 AI 侧栏
 
 ---
@@ -85,6 +93,13 @@ An elegant English dictionary plugin for Obsidian, providing word lookup, AI-pow
 - **Click to look up**: Double-click a word or select a phrase to get instant definitions
 - **Multi-source**: Supports Youdao, Eudic, Free Dictionary API, and more
 - **Smart caching**: Automatic caching to reduce redundant API calls
+
+#### PDF Reading Support
+- **PDF lookup**: Double-click a word inside Obsidian's built-in PDF viewer for the same experience as in notes
+- **PDF context menu**: Right-click a selection for "Look up / Add to Vocabulary / AI Translate / AI Explanation"
+- **Persistent highlights**: Vocabulary words in PDFs are colour-coded by proficiency and survive page turns, scrolling, and zooming
+- **Dehyphenation**: Handles PDF soft hyphens and words broken across lines (`exam-` + `ple` → `example`)
+- **Separate palette**: PDF highlights use their own colour scheme, so they never clash with in-note highlights
 
 #### AI-Powered Analysis
 - **AI Explanation**: One-click detailed explanation including etymology, memory tips, and usage examples
@@ -137,6 +152,7 @@ Open Settings > FleurDict > AI Settings, enter your DeepSeek API Key to enable A
 #### 2. Start Using
 
 - **Look up words**: Double-click a word or select a phrase in the editor
+- **PDF lookup**: Double-click a word or select a phrase directly inside the PDF viewer
 - **Right-click menu**: Right-click selected text for "Look up", "AI Explanation", "Add to Vocabulary"
 - **Sidebar**: Click the ribbon icon on the left to open the Vocabulary Notebook or AI sidebar
 

@@ -28,6 +28,7 @@ export interface FleurDictSettings {
   aiTemperature: number;
   aiMaxTokens: number;
   aiStreaming: boolean;
+  aiDetailPrompt: string; // AI 详解自定义系统提示词，留空使用默认
 
   // 生词本
   autoAddToWordbook: boolean;
@@ -65,6 +66,12 @@ export interface FleurDictSettings {
 
   // 阅读模式右键菜单
   readingModeContextMenu: boolean;
+
+  // PDF 双击查词
+  pdfLookupEnabled: boolean;
+
+  // PDF 生词高亮
+  pdfHighlightEnabled: boolean;
 }
 
 export const DEFAULT_SETTINGS: FleurDictSettings = {
@@ -90,6 +97,7 @@ export const DEFAULT_SETTINGS: FleurDictSettings = {
   aiTemperature: 0.7,
   aiMaxTokens: 8092,
   aiStreaming: true,
+  aiDetailPrompt: '',
 
   // 生词本
   autoAddToWordbook: true,
@@ -124,6 +132,12 @@ export const DEFAULT_SETTINGS: FleurDictSettings = {
 
   // 阅读模式右键菜单
   readingModeContextMenu: false,
+
+  // PDF 双击查词（默认开启）
+  pdfLookupEnabled: true,
+
+  // PDF 生词高亮（默认开启）
+  pdfHighlightEnabled: true,
 };
 
 /**

@@ -21,6 +21,26 @@ export interface DictPopupOptions {
 }
 
 /**
+ * Controls inside the popup that must never start a drag session.
+ * `[role="button"]` covers the pronounce icon, which is a span, not a <button>.
+ */
+const NO_DRAG_SELECTOR = [
+  'button',
+  'a',
+  'input',
+  'textarea',
+  'select',
+  '[role="button"]',
+  '[contenteditable="true"]',
+  '.fleurdict-close-btn',
+  '.fleurdict-resize-handle',
+  '.fleurdict-play-icon',
+].join(', ');
+
+/** Pointer movement (px, manhattan) required before a mousedown counts as a drag. */
+const DRAG_THRESHOLD_PX = 4;
+
+/**
  * Dictionary popup - floating panel
  */
 export class DictPopup {
@@ -107,23 +127,34 @@ export class DictPopup {
     if (!this.container) return;
 
     this.container.addEventListener('mousedown', (e) => {
-      // Don't start drag if clicking close button or resize handle
-      if ((e.target as HTMLElement).closest('.fleurdict-close-btn')) return;
-      if ((e.target as HTMLElement).closest('.fleurdict-resize-handle')) return;
-      // Don't start drag on interactive elements (buttons, links, etc.)
-      if ((e.target as HTMLElement).closest('button, a, input, textarea')) return;
+      const target = e.target as HTMLElement;
+
+      // Never start a drag from a control inside the popup.
+      // The pronounce icon is a <span role="button">, so matching only
+      // button/a/input/textarea treated a click on it as a drag; the drag
+      // "ended" on mouseup and persisted geometry, which cascaded into
+      // saveSettings() -> handler updateSettings() and tore the popup down.
+      if (target.closest(NO_DRAG_SELECTOR)) return;
 
       e.preventDefault();
-      this.isDragging = true;
+      // A drag only begins once the pointer actually moves (see threshold below).
+      this.isDragging = false;
       this.dragStartX = e.clientX;
       this.dragStartY = e.clientY;
       this.containerStartLeft = parseInt(this.container!.style.left || '0', 10);
       this.containerStartTop = parseInt(this.container!.style.top || '0', 10);
-      document.body.classList.add('fleurdict-dragging');
 
       // Register document-level handlers for this drag session only
       const onDragMove = (moveEvent: MouseEvent) => {
-        if (!this.isDragging || !this.container) return;
+        if (!this.container) return;
+        if (!this.isDragging) {
+          // Movement threshold: a plain click (no movement) is not a drag.
+          const moved = Math.abs(moveEvent.clientX - this.dragStartX)
+            + Math.abs(moveEvent.clientY - this.dragStartY);
+          if (moved < DRAG_THRESHOLD_PX) return;
+          this.isDragging = true;
+          document.body.classList.add('fleurdict-dragging');
+        }
         const dx = moveEvent.clientX - this.dragStartX;
         const dy = moveEvent.clientY - this.dragStartY;
         this.container.style.setProperty('left', `${this.containerStartLeft + dx}px`);
@@ -131,11 +162,13 @@ export class DictPopup {
       };
 
       const onDragUp = () => {
+        document.removeEventListener('mousemove', onDragMove);
+        document.removeEventListener('mouseup', onDragUp);
+        document.body.classList.remove('fleurdict-dragging');
+        // Persist geometry only when the popup actually moved — otherwise every
+        // click inside the popup would write settings.
         if (this.isDragging) {
           this.isDragging = false;
-          document.removeEventListener('mousemove', onDragMove);
-          document.removeEventListener('mouseup', onDragUp);
-          document.body.classList.remove('fleurdict-dragging');
           this.savePopupRect();
         }
       };

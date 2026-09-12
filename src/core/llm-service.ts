@@ -234,9 +234,10 @@ export function buildAIDetailPrompt(
   word: string,
   phoneticOrContext?: string,
   meanings?: string,
-  context?: string
+  context?: string,
+  customPrompt?: string
 ): ChatMessage[] {
-  const systemPrompt = `你是一位资深英语教师，请对以下英语单词/短语进行详细讲解。回答要简洁、有条理，使用中文讲解，英文示例。
+  const defaultSystemPrompt = `你是一位资深英语教师，请对以下英语单词/短语进行详细讲解。回答要简洁、有条理，使用中文讲解，英文示例。
 
 请按以下结构讲解：
 1. **音标**：英式 + 美式
@@ -246,6 +247,11 @@ export function buildAIDetailPrompt(
 5. **词源记忆**：简要词源拆解，帮助记忆
 6. **近义辨析**：与易混淆词对比（如有）
 7. **用法提示**：正式/非正式、英式/美式差异等`;
+
+  // User-defined system prompt takes precedence when non-empty ({word} placeholder supported)
+  const systemPrompt = customPrompt && customPrompt.trim().length > 0
+    ? customPrompt.trim().replace(/\{word\}/g, word)
+    : defaultSystemPrompt;
 
   // Determine if called with (word, context?) or (word, phonetic, meanings, context?)
   let phonetic = '';

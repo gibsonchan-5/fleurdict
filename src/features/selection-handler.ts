@@ -35,7 +35,14 @@ export class SelectionHandler {
 
   updateSettings(settings: FleurDictSettings): void {
     this.settings = settings;
-    this.dictPopup = new DictPopup(this.plugin, settings, this.dictEngine);
+    // Keep a visible popup alive: settings are mutated in place, so the live
+    // instance already sees the new values. Replacing it here orphaned the
+    // on-screen panel (still in the DOM, no longer reachable by this handler),
+    // and it used to fire on every saveSettings() — e.g. after dragging the
+    // popup or clicking anything inside it.
+    if (!this.dictPopup.isVisible()) {
+      this.dictPopup = new DictPopup(this.plugin, settings, this.dictEngine);
+    }
   }
 
   /**

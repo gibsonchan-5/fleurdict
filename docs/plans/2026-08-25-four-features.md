@@ -600,14 +600,14 @@ git commit -m "feat: implement word highlighting by proficiency level"
 **Step 1: 构建插件**
 
 ```bash
-cd /Users/jasonchen/WorkBuddy/WB工作区/2026-08-20-14-33-46/fleurdict
+cd <插件项目目录>/fleurdict
 npm run build
 ```
 
 **Step 2: 部署到 Obsidian**
 
 ```bash
-cp main.js styles.css manifest.json /Users/jasonchen/WorkBuddy/obsidian-vault/.obsidian/plugins/fleurdict/
+cp main.js styles.css manifest.json <你的 vault>/.obsidian/plugins/fleurdict/
 ```
 
 **Step 3: 在 Obsidian 中测试**

@@ -52,6 +52,8 @@ export class WordbookManager {
       const allData = (await this.plugin.loadData()) || {};
       allData.wordbook = this.data;
       await this.plugin.saveData(allData);
+      // Notify feature modules (e.g. PDF highlighter) that the wordbook changed
+      this.plugin.app.workspace.trigger('fleurdict:wordbook-changed');
     } catch (error) {
       console.error('FleurDict: Failed to save wordbook:', error);
     }

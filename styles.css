@@ -2943,3 +2943,31 @@ body.fleurdict-reading-mode .fleurdict-highlight-green {
   background-color: rgba(105, 240, 174, 0.4) !important;
   border-bottom: 2px solid #69f0ae;
 }
+
+/* === AI detail custom prompt textarea === */
+.fleurdict-prompt-textarea {
+  width: 100%;
+  min-height: 90px;
+  resize: vertical;
+}
+
+/* === PDF wordbook highlight (overlay layer) ===
+   Painted OUTSIDE .textLayer on purpose. Obsidian dims the text layer to
+   opacity .2 precisely so that selection/highlight backgrounds never hide the
+   canvas-drawn glyphs; fighting that dimming turns a double-click selection
+   into an opaque block that covers the word. The overlay is colour-neutral to
+   that dim (it is a sibling of the text, not a child of the layer), which also
+   keeps the PDF scheme fully separate from the Markdown highlight scheme. */
+.fleurdict-pdf-hl-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.fleurdict-pdf-hl-box {
+  position: absolute;
+  border-radius: 2px;
+}
