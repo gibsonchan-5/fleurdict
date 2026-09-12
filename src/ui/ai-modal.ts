@@ -496,7 +496,7 @@ export async function showAIDetail(
   plugin?: Plugin
 ) {
   const { buildAIDetailPrompt } = await import('../core/llm-service');
-  const messages = buildAIDetailPrompt(word, context);
+  const messages = buildAIDetailPrompt(word, context, undefined, undefined, settings.aiDetailPrompt);
 
   const modal = new AIModal(app, settings, llmService, messages, 'AI 详解', word, plugin);
   modal.open();

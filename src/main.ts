@@ -11,6 +11,8 @@ import { FlashcardEngine } from './core/flashcard-engine';
 import { LLMService } from './core/llm-service';
 import { EudicService } from './core/eudic-service';
 import { SelectionHandler } from './features/selection-handler';
+import { PdfSelectionHandler } from './features/pdf-selection-handler';
+import { PdfWordHighlighter } from './features/pdf-word-highlighter';
 import { ContextMenuManager } from './features/context-menu';
 import { CommandManager } from './features/commands';
 import { FleurDictSettingTab } from './settings';
@@ -32,12 +34,14 @@ export default class FleurDictPlugin extends Plugin {
   llmService!: LLMService;
   eudicService!: EudicService;
   selectionHandler!: SelectionHandler;
+  pdfSelectionHandler!: PdfSelectionHandler;
+  pdfWordHighlighter!: PdfWordHighlighter;
   contextMenuManager!: ContextMenuManager;
   commandManager!: CommandManager;
   readingModeHandler!: ReadingModeHandler;
 
   async onload() {
-    console.log('[FleurDict-DIAG] === Plugin loading BUILD v2026-08-22-1925 ===');
+    console.log('[FleurDict-DIAG] === Plugin loading BUILD v2026-09-12-PDF-10 ===');
     console.log('[FleurDict-DIAG] Loading plugin...');
 
     // Load settings
@@ -55,6 +59,8 @@ export default class FleurDictPlugin extends Plugin {
 
     // Initialize UI modules
     this.selectionHandler = new SelectionHandler(this, this.settings, this.dictEngine);
+    this.pdfSelectionHandler = new PdfSelectionHandler(this, this.settings, this.dictEngine);
+    this.pdfWordHighlighter = new PdfWordHighlighter(this, this.settings, this.wordbookManager);
     this.contextMenuManager = new ContextMenuManager(this, this.settings, this.selectionHandler);
     this.commandManager = new CommandManager(
       this,
@@ -66,6 +72,14 @@ export default class FleurDictPlugin extends Plugin {
 
     // Register event handlers
     this.selectionHandler.register();
+    this.pdfSelectionHandler.register();
+    this.pdfWordHighlighter.register();
+    // fleur-pdf-style Notice diagnostic for the PDF highlight pipeline
+    this.addCommand({
+      id: 'pdf-highlight-diagnose',
+      name: 'PDF 高亮诊断',
+      callback: () => this.pdfWordHighlighter.diagnose(),
+    });
     this.contextMenuManager.register();
     this.commandManager.register();
 
@@ -118,6 +132,8 @@ export default class FleurDictPlugin extends Plugin {
 
     // Unregister event handlers
     this.selectionHandler.unregister();
+    this.pdfSelectionHandler?.unregister();
+    this.pdfWordHighlighter?.unregister();
     this.readingModeHandler?.unregister();
   }
 
@@ -151,6 +167,8 @@ export default class FleurDictPlugin extends Plugin {
     this.wordbookManager.updateSettings(this.settings);
     this.llmService.updateSettings(this.settings);
     this.selectionHandler.updateSettings(this.settings);
+    this.pdfSelectionHandler.updateSettings(this.settings);
+    this.pdfWordHighlighter.updateSettings(this.settings);
     this.contextMenuManager.updateSettings(this.settings);
     this.commandManager.updateSettings(this.settings);
   }
