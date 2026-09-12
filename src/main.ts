@@ -10,6 +10,13 @@ import { WordbookManager } from './core/wordbook-manager';
 import { FlashcardEngine } from './core/flashcard-engine';
 import { LLMService } from './core/llm-service';
 import { EudicService } from './core/eudic-service';
+import { debugLog } from './core/debug';
+import {
+  SECRET_FIELDS,
+  hydrateSecrets,
+  scrubSecretsForPersistence,
+  secretStorageAvailable,
+} from './core/secret-store';
 import { SelectionHandler } from './features/selection-handler';
 import { PdfSelectionHandler } from './features/pdf-selection-handler';
 import { PdfWordHighlighter } from './features/pdf-word-highlighter';
@@ -39,10 +46,12 @@ export default class FleurDictPlugin extends Plugin {
   contextMenuManager!: ContextMenuManager;
   commandManager!: CommandManager;
   readingModeHandler!: ReadingModeHandler;
+  /** Whether API keys can be kept in the system keychain on this build. */
+  secretStorageAvailable = false;
 
   async onload() {
-    console.log('[FleurDict-DIAG] === Plugin loading BUILD v2026-09-12-PDF-10 ===');
-    console.log('[FleurDict-DIAG] Loading plugin...');
+    debugLog('[FleurDict-DIAG] === Plugin loading BUILD v2026-09-12-SECRET-12 ===');
+    debugLog('[FleurDict-DIAG] Loading plugin...');
 
     // Load settings
     await this.loadSettings();
@@ -124,11 +133,11 @@ export default class FleurDictPlugin extends Plugin {
       this.activateWordbookView();
     });
 
-    console.log('FleurDict: Plugin loaded successfully');
+    debugLog('FleurDict: Plugin loaded successfully');
   }
 
   onunload() {
-    console.log('FleurDict: Unloading plugin...');
+    debugLog('FleurDict: Unloading plugin...');
 
     // Unregister event handlers
     this.selectionHandler.unregister();
@@ -139,6 +148,11 @@ export default class FleurDictPlugin extends Plugin {
 
   /**
    * Load settings from storage
+   *
+   * Secrets live in the system keychain rather than in data.json. Any
+   * plain-text key still found on disk (including the stale flat copies
+   * written by older versions) is promoted into the keychain here and then
+   * removed from the file.
    */
   async loadSettings() {
     const data = await this.loadData();
@@ -151,26 +165,63 @@ export default class FleurDictPlugin extends Plugin {
     if (this.settings.eudicCategoryId && this.settings.eudicCategoryId !== '0') {
       this.settings.eudicCategoryId = '0';
     }
-    console.log('FleurDict: Loaded settings, dictionarySource =', this.settings.dictionarySource);
+
+    this.secretStorageAvailable = secretStorageAvailable(this.app);
+    const secrets = await hydrateSecrets(
+      this.app,
+      this.settings as unknown as Record<string, unknown>,
+      data as Record<string, unknown> | null,
+    );
+    debugLog('FleurDict: secret storage', secrets);
+
+    if (secrets.migrated.length > 0) {
+      // Write immediately so the plain-text copies leave data.json now.
+      await this.writeSettingsToDisk();
+      new Notice(
+        `FleurDict：${secrets.migrated.length} 个密钥已移入系统钥匙串，data.json 中不再保存明文`,
+      );
+    }
+
+    debugLog('FleurDict: Loaded settings, dictionarySource =', this.settings.dictionarySource);
+  }
+
+  /**
+   * Writes settings to data.json with every secret field stripped out.
+   *
+   * Secrets are pushed to the system keychain first; a field is only blanked
+   * once the keychain confirms it holds the value, so an unavailable keychain
+   * degrades to the old plain-text behaviour instead of losing the key.
+   * Safe to call before the feature modules exist.
+   */
+  private async writeSettingsToDisk() {
+    const data = ((await this.loadData()) as Record<string, unknown> | null) ?? {};
+    data.settings = await scrubSecretsForPersistence(
+      this.app,
+      this.settings as unknown as Record<string, unknown>,
+    );
+    // Older versions also wrote flat copies at the top level, which are never
+    // read back. Drop the secret ones so they cannot linger as plain text.
+    for (const field of SECRET_FIELDS) {
+      if (field in data) delete data[field];
+    }
+    await this.saveData(data);
   }
 
   /**
    * Save settings to storage
    */
   async saveSettings() {
-    const data = (await this.loadData()) || {};
-    data.settings = this.settings;
-    await this.saveData(data);
+    await this.writeSettingsToDisk();
 
     // Update all modules with new settings
-    this.dictEngine.updateSettings(this.settings);
-    this.wordbookManager.updateSettings(this.settings);
-    this.llmService.updateSettings(this.settings);
-    this.selectionHandler.updateSettings(this.settings);
-    this.pdfSelectionHandler.updateSettings(this.settings);
-    this.pdfWordHighlighter.updateSettings(this.settings);
-    this.contextMenuManager.updateSettings(this.settings);
-    this.commandManager.updateSettings(this.settings);
+    this.dictEngine?.updateSettings(this.settings);
+    this.wordbookManager?.updateSettings(this.settings);
+    this.llmService?.updateSettings(this.settings);
+    this.selectionHandler?.updateSettings(this.settings);
+    this.pdfSelectionHandler?.updateSettings(this.settings);
+    this.pdfWordHighlighter?.updateSettings(this.settings);
+    this.contextMenuManager?.updateSettings(this.settings);
+    this.commandManager?.updateSettings(this.settings);
   }
 
   /**
@@ -271,7 +322,7 @@ export default class FleurDictPlugin extends Plugin {
           await this.eudicService.addWord(word, context);
           new Notice(`✓ "${word}" 已加入生词本并同步到欧路`);
         } catch (e) {
-          console.warn('FleurDict: Eudic sync failed for', word, e);
+          console.warn('FleurDict: Eudic sync failed:', e);
           const errMsg = e instanceof Error ? e.message : String(e);
           new Notice(`✓ "${word}" 已加入本地生词本（欧路同步失败：${errMsg}）`, 6000);
         }

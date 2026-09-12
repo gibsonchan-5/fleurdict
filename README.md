@@ -123,6 +123,11 @@ An elegant English dictionary plugin for Obsidian, providing word lookup, AI-pow
 - **Responsive design**: Works on desktop and mobile
 - **Draggable popup**: Freely draggable and resizable dictionary popup
 
+#### Privacy & Security
+- **Keys in the keychain**: Your API key and Eudic token are stored in the system keychain (macOS Keychain / Windows Credential Manager) and are never written to `data.json` in plain text
+- **No logs by default**: The plugin prints no user content (looked-up words, notebook entries, selected text) to the console
+- **Controllable highlights**: In-note vocabulary highlighting can be toggled on or off at any time in the settings
+
 ### Installation
 
 #### From Community Plugins (Recommended)

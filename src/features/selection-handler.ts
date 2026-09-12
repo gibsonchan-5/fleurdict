@@ -5,6 +5,7 @@
 
 import { MarkdownView } from 'obsidian';
 import { FleurDictSettings } from '../types';
+import { debugLog } from '../core/debug';
 import { DictionaryEngine } from '../core/dictionary-engine';
 import { DictPopup } from '../ui/dict-popup';
 import { isPhrase } from '../utils/helpers';
@@ -60,22 +61,22 @@ export class SelectionHandler {
    */
   async lookupWord(word?: string): Promise<void> {
     let queryWord = word;
-    console.log('FleurDict: lookupWord called with:', word);
+    debugLog('FleurDict: lookupWord called with:', word);
 
     if (!queryWord) {
       queryWord = this.getSelection();
     }
 
     if (!queryWord) {
-      console.log('FleurDict: No word to lookup');
+      debugLog('FleurDict: No word to lookup');
       return;
     }
 
     queryWord = queryWord.trim().toLowerCase();
-    console.log('FleurDict: Querying:', queryWord);
+    debugLog('FleurDict: Querying:', queryWord);
 
     if (!/[a-zA-Z]/.test(queryWord)) {
-      console.log('FleurDict: Not a valid word');
+      debugLog('FleurDict: Not a valid word');
       return;
     }
 
@@ -85,7 +86,7 @@ export class SelectionHandler {
 
     try {
       const results = await this.dictEngine.query(queryWord);
-      console.log('FleurDict: Query results:', results);
+      debugLog('FleurDict: Query results:', results);
 
       if (results.length === 0 || results[0].entries.length === 0) {
         this.dictPopup.showError(queryWord, '未找到该单词的释义');
@@ -109,7 +110,7 @@ export class SelectionHandler {
           }, 50);
         },
       });
-      console.log('FleurDict: Popup shown with results');
+      debugLog('FleurDict: Popup shown with results');
     } catch (error) {
       console.error('FleurDict: Lookup failed:', error);
       this.dictPopup.showError(queryWord, '查询失败，请稍后重试');
