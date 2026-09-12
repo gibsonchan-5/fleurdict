@@ -134,11 +134,7 @@ export class FleurDictSettingTab extends PluginSettingTab {
 
     new Setting(eudicSection)
       .setName('API Token')
-      .setDesc(
-        this.plugin.secretStorageAvailable
-          ? '欧路词典 OpenAPI Token（在 my.eudic.net 获取）。已保存在系统钥匙串，不会写入 data.json。'
-          : '欧路词典 OpenAPI Token（在 my.eudic.net 获取）。当前 Obsidian 版本不支持系统钥匙串，将以明文保存在 data.json。',
-      )
+      .setDesc(this.secretDesc('欧路词典 OpenAPI Token（在 my.eudic.net 获取）。'))
       .addText((text) => {
         text
           .setPlaceholder('输入你的 API Token')
@@ -306,11 +302,7 @@ export class FleurDictSettingTab extends PluginSettingTab {
 
     new Setting(aiSection)
       .setName('API Key')
-      .setDesc(
-        this.plugin.secretStorageAvailable
-          ? 'AI API 密钥。已保存在系统钥匙串，不会写入 data.json。'
-          : 'AI API 密钥。当前 Obsidian 版本不支持系统钥匙串，将以明文保存在 data.json。',
-      )
+      .setDesc(this.secretDesc('AI API 密钥。'))
       .addText((text) => {
         text
           .setPlaceholder('sk-...')
@@ -709,6 +701,68 @@ export class FleurDictSettingTab extends PluginSettingTab {
             new Notice(value ? '已启用生词高亮' : '已关闭生词高亮');
           });
       });
+
+    // =========================================================================
+    // 密钥存储（AI API Key / 欧路 Token 的保存位置）
+    // =========================================================================
+    const secretSection = containerEl.createDiv('fleurdict-settings-section');
+    new Setting(secretSection).setHeading().setName('密钥存储');
+
+    secretSection.createEl('p', {
+      text: '决定 AI API Key 与欧路 Token 保存在哪里。切换后密钥会自动搬到新位置，不会丢失，也不需要重新填写。',
+      cls: 'fleurdict-settings-desc',
+    });
+
+    new Setting(secretSection)
+      .setName('密钥保存位置')
+      .setDesc(
+        this.plugin.secretStorageAvailable
+          ? '系统钥匙串更安全，但密钥不进 vault，因此每台设备都要各自填写一次；data.json 可随 vault 同步给多台设备共用，代价是密钥以明文保存在仓库中。'
+          : '当前 Obsidian 版本不支持系统钥匙串，密钥只能明文保存在 data.json。',
+      )
+      .addDropdown((dropdown) => {
+        dropdown.addOption('system', '系统钥匙串（推荐）');
+        dropdown.addOption('vault', 'data.json（随 vault 同步）');
+        dropdown.setValue(this.plugin.secretBackend);
+        if (!this.plugin.secretStorageAvailable) {
+          dropdown.setDisabled(true);
+        }
+        dropdown.onChange(async (value) => {
+          const mode = value === 'vault' ? 'vault' : 'system';
+          const result = await this.plugin.setSecretStorageMode(mode);
+          if (!result.ok) {
+            new Notice(
+              `FleurDict：密钥移入系统钥匙串失败（${result.failed.join('、')}），已保持原设置`,
+            );
+          } else if (mode === 'vault') {
+            new Notice('FleurDict：密钥将以明文保存在 data.json，并随 vault 同步');
+          } else {
+            new Notice('FleurDict：密钥已移入系统钥匙串，data.json 中不再保存明文');
+          }
+          // 重新渲染，让上方两处密钥说明与下方警告同步更新
+          this.display();
+        });
+      });
+
+    if (this.plugin.secretStorageAvailable && this.plugin.secretBackend === 'vault') {
+      secretSection.createEl('p', {
+        text: '注意：当前为明文存储。密钥会随 Obsidian Sync / iCloud / OneDrive 上传到云端，请确认你接受这一点。',
+        cls: 'fleurdict-settings-desc mod-warning',
+      });
+    }
+  }
+
+  /**
+   * Describes where a secret is currently kept. Shared by the two key fields
+   * so their wording always matches the「密钥保存位置」setting.
+   */
+  private secretDesc(base: string): string {
+    if (!this.plugin.secretStorageAvailable) {
+      return `${base}当前 Obsidian 版本不支持系统钥匙串，将以明文保存在 data.json。`;
+    }
+    return this.plugin.secretBackend === 'system'
+      ? `${base}已保存在系统钥匙串，不会写入 data.json，也不会随 vault 同步。`
+      : `${base}当前以明文保存在 data.json，会随 vault 同步到其他设备。`;
   }
 
   /**

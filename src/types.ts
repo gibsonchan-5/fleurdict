@@ -75,6 +75,11 @@ export interface FleurDictSettings {
 
   // PDF 生词高亮
   pdfHighlightEnabled: boolean;
+
+  // 密钥（API Key / Token）存储位置
+  // system = 系统钥匙串（默认）：不写入 vault，不随同步扩散，但每台设备需各自填写一次
+  // vault  = 明文写入 data.json：随 vault 同步，多设备可共用，但密钥会上传到云端
+  secretStorageMode: 'system' | 'vault';
 }
 
 export const DEFAULT_SETTINGS: FleurDictSettings = {
@@ -144,6 +149,9 @@ export const DEFAULT_SETTINGS: FleurDictSettings = {
 
   // PDF 生词高亮（默认开启）
   pdfHighlightEnabled: true,
+
+  // 密钥存储位置（默认系统钥匙串，最安全）
+  secretStorageMode: 'system',
 };
 
 /**

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.9] - 2026-09-12
+
+### Added
+- ✨ 密钥保存位置可选：设置面板新增「密钥保存位置」，可在「系统钥匙串」与「data.json」之间随时切换，切换时密钥自动搬运、无需重新填写
+  - 系统钥匙串（默认）：密钥不写入 vault，不会随 Obsidian Sync / iCloud / OneDrive 扩散；多设备需各自填写一次
+  - data.json：密钥随 vault 同步，多设备共用；以明文保存在仓库中，面板会显示醒目提示
+
+### Changed
+- 🔒 选择 data.json 时会明确告知密钥将以明文存储并随同步上传云端
+- 🔒 切换以当前密钥为准重新写入目标位置，不会被目标位置的旧值覆盖；写入失败时自动回滚并保留明文，不会丢密钥
+- 📄 README 补充多设备使用说明与两种存储方式的取舍
+
 ## [1.5.8] - 2026-09-12
 
 ### Added
