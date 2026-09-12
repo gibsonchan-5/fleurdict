@@ -7,15 +7,17 @@
 
 import { DictionaryEntry } from '../types';
 import { requestUrl } from 'obsidian';
+import { debugLog } from './debug';
 
 // Use requestUrl as primary (no CORS issues in Electron), fetch as fallback
 async function httpGet(url: string): Promise<{ status: number; json: any }> {
   try {
     const resp = await requestUrl({ url, method: 'GET' });
-    console.log('[FleurDict-DIAG] requestUrl status:', resp.status);
+    debugLog('[FleurDict-DIAG] requestUrl status:', resp.status);
     return { status: resp.status, json: resp.json };
   } catch (reqErr: any) {
-    console.warn('[FleurDict-DIAG] requestUrl failed, trying fetch:', reqErr?.message || reqErr);
+    // 不打印 reqErr：其 message 可能包含请求 URL（内含所查词条）
+    console.warn('[FleurDict-DIAG] requestUrl failed, falling back to fetch');
     try {
       const resp = await fetch(url);
       const json = await resp.json();
@@ -45,20 +47,20 @@ export class YoudaoDictionaryAPI implements OnlineDictionarySource {
     try {
       const dictsParam = encodeURIComponent(JSON.stringify({ count: 99, dicts: [['ec']] }));
       const url = `https://dict.youdao.com/jsonapi?q=${encodeURIComponent(word)}&dicts=${dictsParam}`;
-      console.log('[FleurDict-DIAG] Youdao request URL:', url);
+      debugLog('[FleurDict-DIAG] Youdao request URL:', url);
 
       // Use httpGet (fetch primary, requestUrl fallback)
       const response = await httpGet(url);
-      console.log('[FleurDict-DIAG] Youdao response status:', response.status);
-      console.log('[FleurDict-DIAG] Youdao response keys:', Object.keys(response.json || {}));
-      console.log('[FleurDict-DIAG] ec exists:', !!response.json?.ec);
-      console.log('[FleurDict-DIAG] ec.word count:', response.json?.ec?.word?.length ?? 0);
+      debugLog('[FleurDict-DIAG] Youdao response status:', response.status);
+      debugLog('[FleurDict-DIAG] Youdao response keys:', Object.keys(response.json || {}));
+      debugLog('[FleurDict-DIAG] ec exists:', !!response.json?.ec);
+      debugLog('[FleurDict-DIAG] ec.word count:', response.json?.ec?.word?.length ?? 0);
 
       const entries = this.parseYoudaoData(response.json, word);
-      console.log('[FleurDict-DIAG] Youdao parsed', entries.length, 'entries for', word);
+      debugLog('[FleurDict-DIAG] Youdao parsed', entries.length, 'entries for', word);
       if (entries.length > 0) {
-        console.log('[FleurDict-DIAG] First entry word:', entries[0].word);
-        console.log('[FleurDict-DIAG] First entry meanings count:', entries[0].meanings.length);
+        debugLog('[FleurDict-DIAG] First entry word:', entries[0].word);
+        debugLog('[FleurDict-DIAG] First entry meanings count:', entries[0].meanings.length);
       }
       return entries;
     } catch (error) {
@@ -73,12 +75,12 @@ export class YoudaoDictionaryAPI implements OnlineDictionarySource {
   private parseYoudaoData(data: any, word: string): DictionaryEntry[] {
     const ec = data?.ec;
     if (!ec || !ec.word || ec.word.length === 0) {
-      console.log('FleurDict: Youdao ec empty for', word, '- keys:', Object.keys(data || {}));
+      debugLog('FleurDict: Youdao ec empty for', word, '- keys:', Object.keys(data || {}));
       return [];
     }
 
     const wordData = ec.word[0];
-    console.log('FleurDict: Youdao wordData keys:', Object.keys(wordData));
+    debugLog('FleurDict: Youdao wordData keys:', Object.keys(wordData));
 
     const entries: DictionaryEntry[] = [];
 
@@ -114,7 +116,7 @@ export class YoudaoDictionaryAPI implements OnlineDictionarySource {
     // Parse Chinese definitions grouped by part of speech
     const posMap = new Map<string, DictionaryEntry['meanings'][0]>();
 
-    console.log('[FleurDict-DIAG] Parsing trs, count:', wordData.trs?.length ?? 0);
+    debugLog('[FleurDict-DIAG] Parsing trs, count:', wordData.trs?.length ?? 0);
 
     if (wordData.trs && Array.isArray(wordData.trs)) {
       for (const trOuter of wordData.trs) {
@@ -136,7 +138,7 @@ export class YoudaoDictionaryAPI implements OnlineDictionarySource {
             continue;
           }
 
-          console.log('[FleurDict-DIAG] Parsed definition:', fullDef.substring(0, 60));
+          debugLog('[FleurDict-DIAG] Parsed definition:', fullDef.substring(0, 60));
 
           // Parse "n. 释义内容" or "v. 释义内容"
           const posMatch = fullDef.match(/^([a-z]+\.)\s*(.+)$/i);
@@ -173,7 +175,7 @@ export class YoudaoDictionaryAPI implements OnlineDictionarySource {
     }
 
     const meanings = Array.from(posMap.values());
-    console.log('[FleurDict-DIAG] Meanings built:', meanings.length, 'from posMap size:', posMap.size);
+    debugLog('[FleurDict-DIAG] Meanings built:', meanings.length, 'from posMap size:', posMap.size);
 
     // Build the entry
     // return-phrase can be a string ("appointment") or an object ({l: {i: "appointment"}})

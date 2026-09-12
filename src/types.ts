@@ -67,6 +67,9 @@ export interface FleurDictSettings {
   // 阅读模式右键菜单
   readingModeContextMenu: boolean;
 
+  // 笔记生词高亮全局开关（编辑模式与阅读模式）
+  highlightEnabled: boolean;
+
   // PDF 双击查词
   pdfLookupEnabled: boolean;
 
@@ -132,6 +135,9 @@ export const DEFAULT_SETTINGS: FleurDictSettings = {
 
   // 阅读模式右键菜单
   readingModeContextMenu: false,
+
+  // 笔记生词高亮（默认开启）
+  highlightEnabled: true,
 
   // PDF 双击查词（默认开启）
   pdfLookupEnabled: true,

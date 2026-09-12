@@ -134,7 +134,11 @@ export class FleurDictSettingTab extends PluginSettingTab {
 
     new Setting(eudicSection)
       .setName('API Token')
-      .setDesc('欧路词典 OpenAPI Token（在 my.eudic.net 获取）')
+      .setDesc(
+        this.plugin.secretStorageAvailable
+          ? '欧路词典 OpenAPI Token（在 my.eudic.net 获取）。已保存在系统钥匙串，不会写入 data.json。'
+          : '欧路词典 OpenAPI Token（在 my.eudic.net 获取）。当前 Obsidian 版本不支持系统钥匙串，将以明文保存在 data.json。',
+      )
       .addText((text) => {
         text
           .setPlaceholder('输入你的 API Token')
@@ -143,6 +147,8 @@ export class FleurDictSettingTab extends PluginSettingTab {
             this.plugin.settings.eudicToken = value;
             await this.plugin.saveSettings();
           });
+        text.inputEl.type = 'password';
+        text.inputEl.autocomplete = 'off';
       });
 
     new Setting(eudicSection)
@@ -300,7 +306,11 @@ export class FleurDictSettingTab extends PluginSettingTab {
 
     new Setting(aiSection)
       .setName('API Key')
-      .setDesc('AI API 密钥')
+      .setDesc(
+        this.plugin.secretStorageAvailable
+          ? 'AI API 密钥。已保存在系统钥匙串，不会写入 data.json。'
+          : 'AI API 密钥。当前 Obsidian 版本不支持系统钥匙串，将以明文保存在 data.json。',
+      )
       .addText((text) => {
         text
           .setPlaceholder('sk-...')
@@ -309,6 +319,8 @@ export class FleurDictSettingTab extends PluginSettingTab {
             this.plugin.settings.aiApiKey = value;
             await this.plugin.saveSettings();
           });
+        text.inputEl.type = 'password';
+        text.inputEl.autocomplete = 'off';
       });
 
     new Setting(aiSection)
@@ -667,6 +679,34 @@ export class FleurDictSettingTab extends PluginSettingTab {
             this.plugin.settings.pdfHighlightEnabled = value;
             await this.plugin.saveSettings();
             this.plugin.pdfWordHighlighter?.updateSettings(this.plugin.settings);
+          });
+      });
+
+    // =========================================================================
+    // 生词高亮控制（笔记：编辑模式 + 阅读模式）
+    // =========================================================================
+    const highlightSection = containerEl.createDiv('fleurdict-settings-section');
+    new Setting(highlightSection).setHeading().setName('生词高亮控制');
+
+    highlightSection.createEl('p', {
+      text: '全局开关：关闭后所有笔记（编辑模式与阅读模式）都不再高亮生词，不影响生词本数据。',
+      cls: 'fleurdict-settings-desc',
+    });
+
+    new Setting(highlightSection)
+      .setName('启用生词高亮')
+      .setDesc('关闭后所有笔记（编辑与阅读模式）都不再高亮生词（不影响生词本数据）')
+      .addToggle((toggle) => {
+        toggle
+          .setValue(this.plugin.settings.highlightEnabled)
+          .onChange(async (value) => {
+            this.plugin.settings.highlightEnabled = value;
+            await this.plugin.saveSettings();
+            // 刷新所有已打开的编辑器与阅读视图，开关立即生效
+            const { refreshAllEditorHighlights } = await import('./features/word-highlighter');
+            refreshAllEditorHighlights(this.plugin);
+            this.plugin.readingModeHandler?.refreshAllReadingViews();
+            new Notice(value ? '已启用生词高亮' : '已关闭生词高亮');
           });
       });
   }

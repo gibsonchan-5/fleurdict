@@ -12,6 +12,7 @@
 import { ItemView, WorkspaceLeaf, Menu, Modal, TFile, TFolder, Notice, setIcon } from 'obsidian';
 import { WordEntry, FleurDictSettings } from '../types';
 import { WordbookManager } from '../core/wordbook-manager';
+import { debugLog } from '../core/debug';
 import { DictionaryEngine } from '../core/dictionary-engine';
 import { EditEntryModal } from './edit-entry-modal';
 
@@ -198,7 +199,7 @@ export class WordbookView extends ItemView {
     if (settings.contextPath) {
       this.contextPath = settings.contextPath;
     }
-    console.log('[FleurDict] WordbookView created, contextMode =', this.contextMode);
+    debugLog('[FleurDict] WordbookView created, contextMode =', this.contextMode);
   }
 
   getViewType() {
@@ -449,12 +450,12 @@ export class WordbookView extends ItemView {
 
     const data = this.wordbookManager.getData();
     let entries = [...data.words, ...data.phrases];
-    console.log('[FleurDict] renderWordList: contextMode =', this.contextMode, ', total entries =', entries.length);
-    console.log('[FleurDict] renderWordList: entries sources =', entries.map(e => e.source));
+    debugLog('[FleurDict] renderWordList: contextMode =', this.contextMode, ', total entries =', entries.length);
+    debugLog('[FleurDict] renderWordList: entries sources =', entries.map(e => e.source));
 
     // Filter by context mode
     entries = this.filterByContext(entries);
-    console.log('[FleurDict] renderWordList: after filter, entries =', entries.length, entries.map(e => e.word));
+    debugLog('[FleurDict] renderWordList: after filter, entries =', entries.length, entries.map(e => e.word));
 
     // Sort by creation date (newest first)
     entries.sort((a, b) => b.createdAt - a.createdAt);
@@ -474,7 +475,7 @@ export class WordbookView extends ItemView {
         const meaningEl = await this.renderEntry(listEl, entry);
         if (meaningEl) meaningEls.set(entry.word, meaningEl);
       } catch (e) {
-        console.error(`[FleurDict] Failed to render entry "${entry.word}":`, e);
+        console.error('[FleurDict] Failed to render wordbook entry:', e);
       }
     }
 

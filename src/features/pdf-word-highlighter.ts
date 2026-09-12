@@ -33,6 +33,7 @@
 import { Notice } from 'obsidian';
 import { FleurDictSettings } from '../types';
 import type { WordbookManager } from '../core/wordbook-manager';
+import { debugLog } from '../core/debug';
 
 const OVERLAY_CLASS = 'fleurdict-pdf-hl-layer';
 const BOX_CLASS = 'fleurdict-pdf-hl-box';
@@ -207,7 +208,7 @@ export class PdfWordHighlighter {
       const now = Date.now();
       if (now - this.lastDiagLog > 10000) {
         this.lastDiagLog = now;
-        console.log(
+        debugLog(
           `[FleurDict-PDF] apply: layers=${textLayers.length} ` +
           `boxes=${document.querySelectorAll(`.${BOX_CLASS}`).length} ` +
           `textLayerOpacity=${getComputedStyle(textLayers[0]).opacity}`
@@ -495,7 +496,7 @@ export class PdfWordHighlighter {
       `overlay 图层 ${overlays} 个，已画高亮方框 ${boxes} 个`,
       `旧版残留包裹 span = ${legacy} 个`,
     ].join('\n');
-    console.log('[FleurDict-PDF] 诊断报告\n' + msg);
+    debugLog('[FleurDict-PDF] 诊断报告\n' + msg);
     new Notice(msg, 12000);
   }
 }
