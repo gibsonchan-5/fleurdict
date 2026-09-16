@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.10] - 2026-09-16
+
+### Fixed
+- 🐛 修复「加入生词本」偶发弹出 `TypeError: getMode is not a function`：遍历标签页时改用实例判断，跳过 Obsidian 为后台标签创建的延迟占位视图（DeferredView）
+- 🐛 修复由该报错引发的两个连带问题：词已写入本地生词本却没有同步到欧路（提示却显示失败），以及后台标签页的生词高亮不刷新
+- 🐛 闪卡复习时刷新生词本侧边栏，改为遍历全部生词本视图并做能力检测，避免命中间未显示的占位视图
+
+### Changed
+- 🔧 高亮刷新失败改为独立兜底（仅写入控制台日志），不再打断「加入生词本」主流程与欧路同步
+
 ## [1.5.9] - 2026-09-12
 
 ### Added

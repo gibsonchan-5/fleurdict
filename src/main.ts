@@ -359,8 +359,14 @@ export default class FleurDictPlugin extends Plugin {
       }
 
       // Refresh editor highlights
-      refreshAllEditorHighlights();
-      this.readingModeHandler?.refreshAllReadingViews();
+      // 高亮刷新只是"锦上添花"，单独兜底：即使刷新失败，也不能让整个
+      // 加入生词本的流程报错、更不能因此跳过下面的欧路同步
+      try {
+        refreshAllEditorHighlights();
+        this.readingModeHandler?.refreshAllReadingViews();
+      } catch (refreshError) {
+        console.warn('FleurDict: highlight refresh failed:', refreshError);
+      }
 
       // Sync to Eudic if enabled
       if (this.settings.eudicEnabled && this.settings.eudicToken) {
@@ -438,10 +444,14 @@ export default class FleurDictPlugin extends Plugin {
       session,
       () => {
         // Update callback - refresh wordbook view if open
+        // 与上方 addToWordbook 的刷新逻辑保持一致：leaf.view 可能是未显示的
+        // 延迟占位视图（没有 refresh 方法），必须先做能力检测再调用
         const leaves = this.app.workspace.getLeavesOfType(WORDBOOK_VIEW_TYPE);
-        if (leaves.length > 0) {
-          const view = leaves[0].view as WordbookView;
-          view.refresh();
+        for (const leaf of leaves) {
+          const view = leaf.view as any;
+          if (typeof view.refresh === 'function') {
+            view.refresh();
+          }
         }
       }
     );

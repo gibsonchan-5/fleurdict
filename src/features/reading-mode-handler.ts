@@ -30,11 +30,26 @@ export class ReadingModeHandler {
   }
 
   /**
+   * 判断一个视图是不是"真正的" MarkdownView
+   *
+   * 注意：Obsidian 会为不可见的标签页（后台标签、未激活的标签组）创建
+   * "延迟视图占位"（DeferredView）。它的 getViewType() 同样返回 'markdown'，
+   * 但它没有 getMode() / getState() 等方法，直接调用会抛
+   * "TypeError: xxx.getMode is not a function"。
+   * 因此一切 getMode() 调用前都必须先做实例判断。
+   */
+  private isRealMarkdownView(view: unknown): view is MarkdownView {
+    if (!(view instanceof MarkdownView)) return false;
+    return typeof (view as MarkdownView).getMode === 'function';
+  }
+
+  /**
    * 检查当前活动的 Markdown 视图是否在预览模式
    */
   private isPreviewMode(): boolean {
     const activeView = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
-    return activeView?.getMode() === 'preview';
+    if (!this.isRealMarkdownView(activeView)) return false;
+    return activeView.getMode() === 'preview';
   }
 
   register(): void {
@@ -206,12 +221,12 @@ export class ReadingModeHandler {
    */
   refreshAllReadingViews(): void {
     this.plugin.app.workspace.iterateAllLeaves((leaf) => {
-      const view = leaf.view;
-      if (view.getViewType() === 'markdown') {
-        const md = view as MarkdownView;
-        if (md.getMode() === 'preview') {
-          this.highlightPreviewView(md);
-        }
+      // 不能用 view.getViewType() === 'markdown' 判断：
+      // 延迟视图占位（DeferredView）也返回 'markdown'，但没有 getMode()
+      if (!this.isRealMarkdownView(leaf.view)) return;
+
+      if (leaf.view.getMode() === 'preview') {
+        this.highlightPreviewView(leaf.view);
       }
     });
   }
