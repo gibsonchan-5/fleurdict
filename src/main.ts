@@ -196,6 +196,17 @@ export default class FleurDictPlugin extends Plugin {
       );
     }
 
+    // 方案 A 边界兜底（一次性）：v1.5.10 之前「PDF 右键菜单」没有独立开关，
+    // 老用户若关掉过「PDF 双击查词」来规避 PDF 右键，新键默认 true 会让菜单
+    // 意外「复活」。仅在旧数据确实关过、且新键尚未落盘时同步为 false；
+    // 之后用户在设置里手动改过该键，条件即不成立，不会被覆盖。
+    const persisted = (data?.settings ?? {}) as Record<string, unknown>;
+    if (persisted.pdfLookupEnabled === false && persisted.pdfContextMenu === undefined) {
+      this.settings.pdfContextMenu = false;
+      await this.writeSettingsToDisk();
+      debugLog('FleurDict: pdfContextMenu 迁移为 false（沿用旧版“已关闭”状态）');
+    }
+
     debugLog('FleurDict: Loaded settings, dictionarySource =', this.settings.dictionarySource);
   }
 

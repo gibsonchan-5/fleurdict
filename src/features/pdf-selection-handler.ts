@@ -42,6 +42,7 @@ export class PdfSelectionHandler {
     }, true);
 
     // Right-click on selected PDF text opens the FleurDict menu
+    // （独立开关 pdfContextMenu，与双击查词 pdfLookupEnabled 互不影响）
     this.plugin.registerDomEvent(document, 'contextmenu', (evt: MouseEvent) => {
       this.handleContextMenu(evt);
     }, true);
@@ -100,7 +101,10 @@ export class PdfSelectionHandler {
   }
 
   private handleContextMenu(evt: MouseEvent): void {
-    if (!this.settings.pdfLookupEnabled) return;
+    // 独立开关：只受「PDF 右键菜单」控制，不受「PDF 双击查词」影响。
+    // 关闭时必须原地返回，绝不调用 preventDefault / stopPropagation，
+    // 否则会连原生菜单和其它插件的右键一起掐掉。
+    if (!this.settings.pdfContextMenu) return;
 
     const target = evt.target as HTMLElement | null;
     if (!target) return;

@@ -73,6 +73,9 @@ export interface FleurDictSettings {
   // PDF 双击查词
   pdfLookupEnabled: boolean;
 
+  // PDF 右键菜单（与双击查词解耦：两者互不影响）
+  pdfContextMenu: boolean;
+
   // PDF 生词高亮
   pdfHighlightEnabled: boolean;
 
@@ -146,6 +149,9 @@ export const DEFAULT_SETTINGS: FleurDictSettings = {
 
   // PDF 双击查词（默认开启）
   pdfLookupEnabled: true,
+
+  // PDF 右键菜单（默认开启：保持 v1.5.10 之前的既有行为，老用户升级零感知）
+  pdfContextMenu: true,
 
   // PDF 生词高亮（默认开启）
   pdfHighlightEnabled: true,

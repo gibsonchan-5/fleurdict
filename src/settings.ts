@@ -651,12 +651,24 @@ export class FleurDictSettingTab extends PluginSettingTab {
 
     new Setting(uiSection)
       .setName('PDF 双击查词')
-      .setDesc('启用后，在 PDF 文档中双击单词即可查词，弹窗中可加入生词本或 AI 详解')
+      .setDesc('启用后，在 PDF 文档中双击单词即可查词，弹窗中可加入生词本或 AI 详解。只控制双击，不影响右键菜单。')
       .addToggle((toggle) => {
         toggle
           .setValue(this.plugin.settings.pdfLookupEnabled)
           .onChange(async (value) => {
             this.plugin.settings.pdfLookupEnabled = value;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(uiSection)
+      .setName('PDF 右键菜单')
+      .setDesc('启用后，在 PDF 中选中英文再右键，会用 FleurDict 菜单替代 PDF 原生菜单（查词、加入生词本、AI 翻译、AI 详解）。关闭后完全交还原生菜单，不与其它插件争抢。')
+      .addToggle((toggle) => {
+        toggle
+          .setValue(this.plugin.settings.pdfContextMenu)
+          .onChange(async (value) => {
+            this.plugin.settings.pdfContextMenu = value;
             await this.plugin.saveSettings();
           });
       });
